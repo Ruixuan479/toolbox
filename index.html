@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>个人工具箱</title>
+<!-- PWA：可安装到手机主屏幕，全屏 + 离线运行 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C2873B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="工具箱">
+<meta name="application-name" content="工具箱">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<!-- Chart.js（在线时启用，离线自动降级为原生 Canvas 绘制） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<!-- =========================================================================
+     css/style.css  —— 全局样式 / 布局 / 侧边栏 / 卡片 / 按钮
+     统一通过 CSS 变量管理主题色与字体
+========================================================================= -->
+<style>
+:root{
+  /* 主题色 */
+  --bg:#F6F2EA;            /* 内容区背景（米白） */
+  --surface:#FFFDF7;       /* 卡片 */
+  --surface-2:#F1EADC;     /* 次级面 */
+  --sidebar:#2B2620;       /* 侧边栏（深炭） */
+  --sidebar-2:#39322A;     /* 侧边栏悬浮 */
+  --text:#3A332C;          /* 主文字（深灰） */
+  --text-soft:#7C746A;     /* 次要文字 */
+  --text-faint:#A8A095;    /* 更弱 */
+  --on-dark:#EDE6D8;       /* 深底上的文字 */
+  --on-dark-soft:#A79C8B;
+  --border:#E7DECF;        /* 边框/分隔线 */
+  --border-2:#EFE8DA;
+  --accent:#C2873B;        /* 焦糖/琥珀 主点缀 */
+  --accent-deep:#A1652A;
+  --accent-soft:#F0E7D6;
+  --dot:#E8822C;           /* 暖橙 */
+  --green:#5E8C7B;         /* 电子/成功 */
+  --green-soft:#DCE6E2;
+  --danger:#B6532F;
+  --danger-soft:#F6E0DA;
+  /* 排版 */
+  --sans:"Noto Sans SC",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  --serif:"Noto Serif SC",Georgia,"Songti SC",serif;
+  --hand:"Ma Shan Zheng",var(--serif);
+  /* 形状 */
+  --r:16px; --r-sm:11px;
+  --shadow:0 8px 30px rgba(90,70,40,.10);
+  --shadow-sm:0 2px 10px rgba(90,70,40,.07);
+  --sidebar-w:232px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{font-family:var(--sans);color:var(--text);background:var(--bg);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+
+/* ---------- 布局 ---------- */
+.layout{display:flex;min-height:100vh;}
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;background:var(--sidebar);color:var(--on-dark);
+  display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:50;
+  transition:transform .28s cubic-bezier(.22,1,.36,1);
+}
+.sidebar .logo{padding:26px 24px 20px;padding-top:calc(26px + env(safe-area-inset-top));}
+.sidebar .logo .kanji{font-family:var(--hand);font-size:26px;letter-spacing:2px;color:#fff;line-height:1;}
+.sidebar .logo .sub{font-family:var(--serif);font-size:10px;letter-spacing:4px;color:var(--accent);margin-top:8px;text-transform:uppercase;}
+.nav{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:3px;}
+.nav-item{
+  display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:11px;cursor:pointer;
+  color:var(--on-dark-soft);font-size:15px;font-weight:400;border:none;background:none;text-align:left;width:100%;
+  font-family:var(--sans);transition:.15s;
+}
+.nav-item svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.nav-item:hover{background:var(--sidebar-2);color:var(--on-dark);}
+.nav-item.active{background:var(--accent);color:#fff;font-weight:500;box-shadow:0 4px 14px rgba(194,135,59,.35);}
+.sidebar .foot{padding:16px 24px;font-size:11px;color:var(--on-dark-soft);border-top:1px solid rgba(255,255,255,.06);}
+
+.main{flex:1;margin-left:var(--sidebar-w);min-width:0;display:flex;flex-direction:column;}
+.topbar{display:none;align-items:center;gap:14px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:30;}
+.hamburger{width:42px;height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.hamburger svg{width:22px;height:22px;stroke:var(--text);fill:none;stroke-width:2;stroke-linecap:round;}
+.topbar .tb-title{font-family:var(--serif);font-size:18px;font-weight:600;}
+.scrim{display:none;position:fixed;inset:0;background:rgba(43,38,32,.45);z-index:45;opacity:0;transition:opacity .25s;}
+.scrim.show{display:block;opacity:1;}
+
+.content{padding:26px 28px 60px;max-width:880px;width:100%;margin:0 auto;}
+.module{display:none;animation:fade .25s ease;}
+.module.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* ---------- 通用：标题 / 卡片 / 按钮 ---------- */
+.page-title{font-family:var(--serif);font-size:25px;font-weight:600;letter-spacing:1px;}
+.page-sub{font-size:13px;color:var(--text-soft);margin-top:3px;}
+.page-head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+
+.card{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:18px;}
+.card+.card{margin-top:14px;}
+
+.btn{border:none;cursor:pointer;font-family:var(--sans);font-size:15px;font-weight:500;padding:12px 18px;border-radius:12px;transition:.16s;display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(194,135,59,.3);}
+.btn-primary:active{background:var(--accent-deep);}
+.btn-ghost{background:var(--surface-2);color:var(--text);}
+.btn-ghost:hover{background:var(--border);}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid #E6C8BD;}
+.btn-danger.armed{background:var(--danger);color:#fff;border-color:var(--danger);}
+.btn-lg{padding:16px 22px;font-size:16px;min-height:54px;border-radius:14px;}
+.btn-block{width:100%;}
+.add-btn{border:none;cursor:pointer;font-family:var(--sans);font-weight:500;font-size:14px;color:#fff;background:var(--accent);padding:10px 16px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 14px rgba(194,135,59,.32);transition:.15s;}
+.add-btn:active{transform:scale(.95);background:var(--accent-deep);}
+.add-btn .plus{font-size:18px;line-height:1;margin-top:-1px;}
+
+.chip{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:500;display:inline-block;}
+.chip.paper{background:var(--accent-soft);color:var(--accent-deep);}
+.chip.digital{background:var(--green-soft);color:var(--green);}
+.chip.muted{background:var(--surface-2);color:var(--text-soft);}
+
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px;}
+.seg button{flex:1;border:none;background:none;padding:10px;border-radius:9px;font-family:var(--sans);font-size:14px;font-weight:500;color:var(--text-soft);cursor:pointer;transition:.18s;}
+.seg button.on{background:var(--surface);color:var(--accent-deep);box-shadow:var(--shadow-sm);}
+
+.empty-state{text-align:center;padding:34px 20px;color:var(--text-faint);}
+.empty-state .em-ill{font-family:var(--hand);font-size:40px;color:var(--border);margin-bottom:6px;}
+.empty-state p{font-size:13px;}
+.hint{font-size:11px;color:var(--text-faint);}
+.hidden{display:none!important;}
+
+/* ---------- 表单字段 ---------- */
+.field{margin-bottom:18px;}
+.field>label{display:block;font-size:12px;color:var(--text-soft);margin-bottom:7px;font-weight:500;}
+.field input,.field select{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:12px 14px;font-family:var(--sans);font-size:15px;color:var(--text);transition:border .2s;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);}
+.row-2{display:flex;gap:10px;}.row-2>*{flex:1;}
+
+/* ---------- 弹窗 sheet ---------- */
+.overlay{position:fixed;inset:0;background:rgba(43,38,32,.42);backdrop-filter:blur(2px);z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;}
+.overlay.show{opacity:1;pointer-events:auto;}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:460px;background:var(--bg);border-radius:24px 24px 0 0;z-index:61;transform:translateY(100%);transition:transform .32s cubic-bezier(.22,1,.36,1);max-height:92vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(43,38,32,.18);pointer-events:none;}
+.sheet.show{transform:translateY(0);pointer-events:auto;}
+.sheet-grip{width:38px;height:4px;background:var(--border);border-radius:3px;margin:10px auto 4px;}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:6px 22px 12px;}
+.sheet-head h3{font-family:var(--serif);font-size:19px;font-weight:600;}
+.sheet-close{background:none;border:none;font-size:24px;color:var(--text-faint);cursor:pointer;line-height:1;}
+.sheet-body{padding:0 22px 30px;}
+.form-actions{display:flex;gap:12px;margin-top:8px;}
+.form-actions .btn{flex:1;}.form-actions .btn-danger{flex:0 0 auto;padding:14px 18px;}
+
+@media (min-width:560px){.sheet{max-width:460px;border-radius:20px;left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-46%) scale(.96);opacity:0;transition:.28s;}.sheet.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}}
+
+/* ---------- toast ---------- */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:#fff;font-size:13px;padding:10px 18px;border-radius:999px;z-index:80;opacity:0;pointer-events:none;transition:.28s;max-width:80%;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---------- 仪表盘 ---------- */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;}
+.dash-card{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:18px;cursor:pointer;transition:transform .15s,box-shadow .2s;position:relative;overflow:hidden;}
+.dash-card:active{transform:scale(.985);}
+.dash-card .dc-ico{font-size:22px;}
+.dash-card .dc-name{font-size:13px;color:var(--text-soft);margin-top:8px;}
+.dash-card .dc-main{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--accent-deep);line-height:1.15;margin-top:4px;}
+.dash-card .dc-main .u{font-size:13px;font-weight:500;color:var(--text-soft);margin-left:3px;}
+.dash-card .dc-foot{font-size:12px;color:var(--text-faint);margin-top:5px;}
+.today-banner{background:linear-gradient(120deg,var(--accent),var(--dot));color:#fff;border-radius:var(--r);padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow);}
+.today-banner .tb-d{font-family:var(--serif);font-size:30px;font-weight:700;line-height:1;}
+.today-banner .tb-w{font-size:13px;opacity:.9;margin-top:7px;letter-spacing:1px;}
+
+/* ---------- 热力图（CSS 网格） ---------- */
+.heat-wrap{overflow-x:auto;padding-bottom:4px;}
+.heatmap{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;width:max-content;}
+.heat-cell{width:11px;height:11px;border-radius:3px;background:var(--surface-2);}
+.heat-cell.l1{background:#F0DDBE;}
+.heat-cell.l2{background:#E3B978;}
+.heat-cell.l3{background:#CE9446;}
+.heat-cell.l4{background:#A1652A;}
+.heat-legend{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-faint);margin-top:8px;}
+.heat-legend .hl-c{width:11px;height:11px;border-radius:3px;}
+
+/* =========================================================================
+   读书模块样式（沿用日历手账风，颜色改用工具箱变量）
+========================================================================= */
+.cal-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:16px 14px 18px;border:1px solid var(--border-2);}
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:0 6px 12px;}
+.cal-title{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:1px;}
+.cal-title .yr{color:var(--text-faint);font-weight:400;font-size:14px;margin-left:6px;}
+.nav-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text-soft);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.nav-btn:active{background:var(--border-2);}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px;}
+.weekdays span{text-align:center;font-size:11px;color:var(--text-faint);padding:6px 0;font-weight:500;}
+.weekdays span.we{color:var(--accent);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cell{aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border-radius:11px;cursor:pointer;font-size:15px;color:var(--text);transition:background .15s;}
+.cell.empty{cursor:default;}
+.cell.other{color:var(--text-faint);opacity:.5;}
+.cell .dot{width:6px;height:6px;border-radius:50%;background:var(--dot);position:absolute;bottom:9px;}
+.cell.today{font-weight:700;}
+.cell.today .num{color:var(--accent-deep);}
+.cell.today::before{content:"";position:absolute;inset:6px;border-radius:10px;border:1.5px solid var(--accent);opacity:.55;}
+.cell.sel{background:var(--accent);color:#fff;font-weight:600;}
+.cell.sel .dot{background:#fff;}
+.cell.sel.today .num{color:#fff;}
+.cell.sel.today::before{border-color:rgba(255,255,255,.6);}
+.cell:not(.empty):not(.sel):active{background:var(--border-2);}
+
+.timeline-wrap{margin-top:18px;}
+.tl-head{display:flex;align-items:baseline;gap:10px;padding:0 4px 6px;}
+.tl-date{font-family:var(--serif);font-size:17px;font-weight:600;}
+.tl-meta{font-size:12px;color:var(--text-soft);}
+.timeline{position:relative;padding:8px 4px 4px 4px;}
+.tl-hint{font-size:11px;color:var(--text-faint);padding:0 4px 4px;}
+.timeline::before{content:"";position:absolute;left:62px;top:4px;bottom:14px;width:2px;background:var(--border);border-radius:2px;}
+.tl-item{position:relative;display:grid;grid-template-columns:54px 1fr;gap:18px;padding:8px 0;cursor:pointer;}
+.tl-time{text-align:right;font-family:var(--serif);font-size:13px;color:var(--text-soft);line-height:1.35;padding-top:9px;}
+.tl-time .end{display:block;color:var(--text-faint);font-size:12px;}
+.tl-node{position:absolute;left:55px;top:15px;width:16px;height:16px;border-radius:50%;background:var(--surface);border:3px solid var(--dot);z-index:2;}
+.tl-item.digital .tl-node{border-color:var(--green);}
+.tl-card{background:var(--surface);border:1px solid var(--border-2);border-radius:13px;padding:11px 13px;box-shadow:var(--shadow-sm);}
+.tl-book{font-weight:500;font-size:15px;margin-bottom:5px;}
+.tl-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.tl-tags .dur{font-size:11px;color:var(--text-soft);}
+.tl-tags .pages{font-size:11px;color:var(--text-faint);}
+
+.book-list{display:flex;flex-direction:column;gap:12px;}
+.book{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);padding:15px 16px;box-shadow:var(--shadow-sm);cursor:pointer;transition:transform .15s;}
+.book:active{transform:scale(.99);}
+.book-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.book-name{font-family:var(--serif);font-weight:600;font-size:16px;line-height:1.3;}
+.book-stats{display:flex;gap:18px;margin-top:11px;}
+.book-stats .stat{display:flex;flex-direction:column;}
+.book-stats .v{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--accent-deep);}
+.book-stats .l{font-size:11px;color:var(--text-soft);margin-top:1px;}
+.progress{margin-top:13px;}
+.progress .bar{height:7px;background:var(--border-2);border-radius:6px;overflow:hidden;}
+.progress .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--dot));border-radius:6px;transition:width .4s;}
+.progress .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--text-soft);margin-top:6px;}
+.dur-badge{display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:var(--accent-soft);color:var(--accent-deep);font-size:13px;padding:6px 13px;border-radius:999px;font-weight:500;}
+.dur-badge.warn{background:var(--danger-soft);color:var(--danger);}
+.time-selects{display:flex;align-items:center;gap:6px;}.time-selects select{flex:1;text-align:center;}.time-selects .colon{color:var(--text-faint);font-weight:600;}
+.suggest{position:relative;}
+.suggest-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:5;max-height:180px;overflow-y:auto;display:none;}
+.suggest-list.show{display:block;}
+.suggest-list .opt{padding:11px 14px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border-2);}
+.suggest-list .opt:last-child{border-bottom:none;}
+.suggest-list .opt .new-tag{font-size:11px;color:var(--accent);margin-left:8px;}
+
+/* ---------- 统计 / 图表通用 ---------- */
+.stat-row{display:flex;gap:12px;}
+.stat-box{flex:1;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:16px;text-align:center;}
+.stat-box .big{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--accent-deep);line-height:1;}
+.stat-box .big .u{font-size:13px;font-weight:500;color:var(--text-soft);margin-left:3px;}
+.stat-box .lbl{font-size:12px;color:var(--text-soft);margin-top:7px;}
+.pie-area{display:flex;align-items:center;gap:22px;}
+.legend{display:flex;flex-direction:column;gap:12px;}
+.legend .lg{display:flex;align-items:center;gap:9px;}
+.legend .sw{width:12px;height:12px;border-radius:4px;}
+.legend .lg-k{font-size:13px;font-weight:500;}
+.legend .lg-v{font-size:12px;color:var(--text-soft);}
+
+/* =========================================================================
+   健身模块样式
+========================================================================= */
+.workout-list{display:flex;flex-direction:column;gap:12px;}
+.workout-card{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:15px 16px;cursor:pointer;}
+.workout-card .wc-top{display:flex;justify-content:space-between;align-items:baseline;}
+.workout-card .wc-date{font-family:var(--serif);font-weight:600;font-size:15px;}
+.workout-card .wc-sum{font-size:12px;color:var(--text-soft);margin-top:6px;}
+.workout-card .wc-ex{font-size:13px;color:var(--text);margin-top:8px;line-height:1.6;}
+.tmpl-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;}
+.tmpl-chip{flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 16px;font-size:14px;cursor:pointer;font-weight:500;}
+.tmpl-chip:active{background:var(--surface-2);}
+
+.active-workout{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:16px;}
+.aw-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.aw-timer{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--accent-deep);}
+.aw-timer .lbl{font-size:11px;color:var(--text-soft);font-family:var(--sans);font-weight:400;display:block;}
+.ex-block{border:1px solid var(--border-2);border-radius:13px;padding:13px;margin-bottom:12px;background:var(--bg);}
+.ex-block .ex-name{font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
+.ex-block .ex-name .rm{color:var(--text-faint);font-size:13px;cursor:pointer;}
+.set-list{margin:10px 0;display:flex;flex-direction:column;gap:6px;}
+.set-row{display:flex;align-items:center;gap:10px;font-size:14px;background:var(--surface);border:1px solid var(--border-2);border-radius:9px;padding:8px 12px;}
+.set-row .si{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.set-row .sv{font-family:var(--serif);font-weight:600;}
+.set-row .rest{margin-left:auto;font-size:12px;color:var(--text-faint);}
+.set-row .del-set{color:var(--text-faint);cursor:pointer;padding:0 4px;}
+.set-input{display:flex;gap:10px;align-items:flex-end;margin-top:10px;}
+.set-input .si-col{flex:1;}
+.set-input label{font-size:11px;color:var(--text-soft);display:block;margin-bottom:5px;}
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:11px;overflow:hidden;background:var(--surface);}
+.stepper button{width:42px;height:48px;border:none;background:var(--surface-2);font-size:20px;cursor:pointer;color:var(--text);flex-shrink:0;}
+.stepper button:active{background:var(--border);}
+.stepper input{border:none;text-align:center;width:100%;font-size:17px;font-family:var(--serif);font-weight:600;padding:0;background:none;}
+.stepper input:focus{outline:none;}
+
+.rest-banner{position:sticky;bottom:0;background:var(--accent-deep);color:#fff;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-top:14px;box-shadow:0 6px 20px rgba(161,101,42,.4);}
+.rest-banner .rb-t{font-family:var(--serif);font-size:24px;font-weight:700;line-height:1;}
+.rest-banner .rb-l{font-size:11px;opacity:.85;}
+.rest-banner .rb-actions{margin-left:auto;display:flex;gap:8px;}
+.rest-banner button{border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:9px;padding:9px 13px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);}
+.rest-banner button:active{background:rgba(255,255,255,.32);}
+
+.ex-lib-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border-2);border-radius:12px;padding:13px 15px;margin-bottom:9px;cursor:pointer;}
+.ex-lib-item .eli-cat{font-size:11px;color:var(--text-soft);background:var(--surface-2);padding:2px 9px;border-radius:999px;}
+.picker-item{padding:13px 15px;border:1px solid var(--border-2);border-radius:11px;margin-bottom:8px;cursor:pointer;background:var(--surface);font-size:15px;display:flex;justify-content:space-between;align-items:center;}
+.picker-item:active{background:var(--surface-2);}
+
+/* ---------- 身体模块 ---------- */
+.weight-current{text-align:center;padding:8px 0 4px;}
+.weight-current .wc-kg{font-family:var(--serif);font-size:44px;font-weight:700;color:var(--accent-deep);line-height:1;}
+.weight-current .wc-kg .u{font-size:16px;font-weight:500;color:var(--text-soft);}
+.weight-current .wc-delta{font-size:13px;margin-top:8px;color:var(--text-soft);}
+.weight-current .wc-delta.up{color:var(--danger);}
+.weight-current .wc-delta.down{color:var(--green);}
+.chart-box{position:relative;height:220px;margin-top:6px;}
+.weight-log{margin-top:8px;}
+.wl-row{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--border-2);font-size:14px;}
+.wl-row:last-child{border-bottom:none;}
+.wl-row .wl-d{color:var(--text-soft);}
+.wl-row .wl-v{font-family:var(--serif);font-weight:600;}
+.wl-row .wl-del{color:var(--text-faint);cursor:pointer;padding:4px 8px;}
+
+/* ---------- 设置模块 ---------- */
+.set-group{margin-bottom:14px;}
+.set-group h4{font-size:13px;color:var(--text-soft);margin-bottom:8px;font-weight:500;}
+.set-row-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--border-2);}
+.set-row-item:last-child{border-bottom:none;}
+.set-row-item .sri-t{font-size:15px;}
+.set-row-item .sri-d{font-size:12px;color:var(--text-faint);margin-top:2px;}
+
+/* ---------- 习惯追踪器模块 ---------- */
+.habit-week-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;}
+.habit-week-nav .wk-label{font-family:var(--serif);font-size:15px;font-weight:600;text-align:center;flex:1;}
+.habit-week-nav .wk-label .wk-sub{display:block;font-family:var(--sans);font-size:11px;color:var(--text-soft);font-weight:400;margin-top:2px;}
+.habit-week-nav button{min-width:44px;min-height:44px;border:1px solid var(--border);background:var(--surface);border-radius:11px;cursor:pointer;color:var(--text-soft);font-size:14px;padding:0 12px;font-family:var(--sans);}
+.habit-week-nav button:active{background:var(--surface-2);}
+.habit-week-nav .wk-today{color:var(--accent-deep);font-weight:500;}
+
+.habit-grid-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border-2);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow-sm);}
+.habit-grid{display:grid;min-width:420px;}
+.hg-row{display:grid;grid-template-columns:minmax(128px,1.5fr) repeat(7,minmax(44px,1fr));border-bottom:1px solid var(--border-2);}
+.hg-row:last-child{border-bottom:none;}
+.hg-head{position:sticky;top:0;z-index:2;background:var(--surface-2);}
+.hg-cell{min-height:48px;display:flex;align-items:center;justify-content:center;border-left:1px solid var(--border-2);font-size:12px;color:var(--text-soft);}
+.hg-cell:first-child{border-left:none;}
+.hg-dayhead{flex-direction:column;gap:1px;padding:7px 0;}
+.hg-dayhead .d-w{font-size:11px;}
+.hg-dayhead .d-n{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--text);}
+.hg-dayhead.today .d-n{color:#fff;background:var(--accent);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.hg-name{justify-content:flex-start;gap:9px;padding:10px 12px;cursor:pointer;position:sticky;left:0;background:var(--surface);z-index:1;border-right:1px solid var(--border-2);}
+.hg-head .hg-name{background:var(--surface-2);}
+.hg-name .h-ico{font-size:18px;flex-shrink:0;}
+.hg-name .h-info{min-width:0;}
+.hg-name .h-nm{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hg-name .h-fq{font-size:11px;color:var(--text-faint);}
+.hg-name.drag-over{background:var(--accent-soft);}
+.hg-name[draggable=true]{cursor:grab;}
+.hg-row.met .hg-name{box-shadow:inset 3px 0 0 var(--green);}
+.hg-row.met .hg-name .h-fq{color:var(--green);}
+
+.hg-check{cursor:pointer;border-left:1px solid var(--border-2);min-height:48px;display:flex;align-items:center;justify-content:center;transition:background .12s;}
+.hg-check:active{background:var(--surface-2);}
+.hg-check .mark{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1.5px solid var(--border);color:transparent;}
+.hg-check.done .mark{background:var(--accent);border-color:var(--accent);color:#fff;}
+.hg-check.today-col{background:rgba(194,135,59,.05);}
+.hg-check.future{cursor:not-allowed;opacity:.4;}
+.hg-check.future .mark{border-style:dashed;}
+
+.habit-detail{margin-top:16px;}
+.hd-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.hd-head .hd-ico{font-size:26px;}
+.hd-head .hd-nm{font-family:var(--serif);font-size:18px;font-weight:600;}
+.hd-head .hd-desc{font-size:12px;color:var(--text-soft);}
+.hd-actions{margin-left:auto;display:flex;gap:8px;}
+.hd-actions button{min-height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer;color:var(--text-soft);font-family:var(--sans);}
+.hd-stats{display:flex;gap:12px;}
+.hd-stats .stat-box{padding:13px;}
+.hd-stats .stat-box .big{font-size:24px;}
+
+.habit-archived{margin-top:18px;}
+.habit-archived .arch-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface-2);border-radius:11px;margin-bottom:8px;font-size:14px;color:var(--text-soft);}
+.habit-archived .arch-item .a-ico{font-size:17px;}
+.habit-archived .arch-item button{margin-left:auto;min-height:36px;padding:0 12px;border:1px solid var(--border);background:var(--surface);border-radius:9px;font-size:12px;cursor:pointer;color:var(--text);}
+
+.emoji-row{display:flex;gap:8px;flex-wrap:wrap;}
+.emoji-row .em{width:44px;height:44px;border:1px solid var(--border);border-radius:11px;background:var(--surface);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.emoji-row .em.on{border-color:var(--accent);background:var(--accent-soft);}
+.freq-extra{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--text-soft);}
+.freq-extra input{width:80px;}
+
+/* ---------- 响应式：移动端侧边栏折叠 ---------- */
+@media (max-width:820px){
+  .sidebar{transform:translateX(-100%);box-shadow:8px 0 40px rgba(43,38,32,.25);}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .topbar{display:flex;}
+  .content{padding:18px 16px 70px;}
+  .page-title{font-size:22px;}
+}
+</style>
+</head>
+<body>
+
+<!-- =========================================================================
+     index.html  —— 侧边栏 + 主内容容器
+========================================================================= -->
+<div class="layout">
+
+  <!-- 侧边栏导航 -->
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="kanji">个人工具箱</div>
+      <div class="sub">Toolbox</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-module="dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        仪表盘
+      </button>
+      <button class="nav-item" data-module="reading">
+        <svg viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-1.5-7-.5v13c2-1 5-1 7 .5 2-1.5 5-1.5 7-.5V5.5c-2-1-5-1-7 .5z"/><path d="M12 6v13"/></svg>
+        读书
+      </button>
+      <button class="nav-item" data-module="fitness">
+        <svg viewBox="0 0 24 24"><path d="M6.5 6.5l11 11"/><path d="M4 9l2-2 2 2-2 2zM16 19l2-2 2-2-2-2-2 2zM2 11l2 2M22 13l-2-2"/></svg>
+        健身
+      </button>
+      <button class="nav-item" data-module="body">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v8M12 11l-4 2M12 11l4 2M12 16l-2 5M12 16l2 5"/></svg>
+        身体
+      </button>
+      <button class="nav-item" data-module="habits">
+        <svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M7 3l1.5 1.5L11 2M7 10l1.5 1.5L11 9M7 17l1.5 1.5L11 16"/></svg>
+        习惯
+      </button>
+      <button class="nav-item" data-module="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 000 2l-2 1.6 2 3.4 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.4-2-1.6a7 7 0 00.1-1z"/></svg>
+        设置
+      </button>
+    </nav>
+    <div class="foot">数据仅保存在本机浏览器</div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- 主内容区 -->
+  <div class="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburger" aria-label="菜单">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <div class="tb-title" id="tbTitle">仪表盘</div>
+    </div>
+
+    <div class="content">
+      <!-- 各模块容器：JS 切换显示，默认隐藏 -->
+      <section class="module active" id="module-dashboard"></section>
+      <div     class="module"        id="module-reading"></div>
+      <section class="module"        id="module-fitness"></section>
+      <section class="module"        id="module-body"></section>
+      <section class="module"        id="module-habits"></section>
+      <section class="module"        id="module-settings"></section>
+    </div>
+  </div>
+</div>
+
+<!-- 共享：遮罩 / toast -->
+<div class="overlay" id="overlay"></div>
+<div class="toast" id="toast"></div>
+
+
+<!-- =========================================================================
+     js/storage.js  —— 本地存储层（命名空间前缀 toolbox_）
+========================================================================= -->
+<script>
+const Storage = (function(){
+  const NS = 'toolbox_';
+  // 检测 localStorage 是否可用（沙箱 iframe / 隐私模式下会抛错）
+  let ok = false;
+  try{ const t='__t'; window.localStorage.setItem(t,'1'); window.localStorage.removeItem(t); ok = true; }catch(e){ ok = false; }
+  const mem = {};   // 不可用时的内存兜底
+  function rawGet(k){ return ok ? window.localStorage.getItem(k) : (k in mem ? mem[k] : null); }
+  function rawSet(k,v){ if(ok) window.localStorage.setItem(k,v); else mem[k]=v; }
+  function rawDel(k){ if(ok) window.localStorage.removeItem(k); else delete mem[k]; }
+  function rawKeys(){ return ok ? Object.keys(window.localStorage) : Object.keys(mem); }
+
+  function set(key, val){ try{ rawSet(NS+key, JSON.stringify(val)); }catch(e){ console.warn('存储失败',e); } }
+  function get(key, fallback){ try{ const r=rawGet(NS+key); return r==null?fallback:JSON.parse(r); }catch(e){ return fallback; } }
+  function remove(key){ try{ rawDel(NS+key); }catch(e){} }
+  function keys(){ try{ return rawKeys().filter(k=>k.indexOf(NS)===0); }catch(e){ return []; } }
+  function clear(){ try{ keys().forEach(rawDel); }catch(e){} }
+  function exportAll(){ const o={}; try{ keys().forEach(k=>o[k]=rawGet(k)); }catch(e){} return o; }
+  function importAll(obj){
+    let n=0;
+    try{ Object.entries(obj||{}).forEach(([k,v])=>{ const fk=k.indexOf(NS)===0?k:NS+k; rawSet(fk, typeof v==='string'?v:JSON.stringify(v)); n++; }); }catch(e){}
+    return n;
+  }
+  return { NS, available:ok, set, get, remove, clear, keys, exportAll, importAll };
+})();
+</script>
+
+
+<!-- =========================================================================
+     公共工具函数
+========================================================================= -->
+<script>
+const U = {
+  pad: n => String(n).padStart(2,'0'),
+  toISO(d){ return `${d.getFullYear()}-${U.pad(d.getMonth()+1)}-${U.pad(d.getDate())}`; },
+  today(){ return U.toISO(new Date()); },
+  parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); },
+  weekdayCN(d){ return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; },
+  uid(){ return Date.now()+Math.floor(Math.random()*1000); },
+  esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+  mins(t){ const [h,m]=t.split(':').map(Number); return h*60+m; },
+  fmtDur(m){ if(m<=0)return '0 分钟'; const h=Math.floor(m/60),mm=m%60; if(h&&mm)return `${h} 小时 ${mm} 分钟`; if(h)return `${h} 小时`; return `${mm} 分钟`; },
+  fmtClock(s){ const m=Math.floor(s/60),ss=s%60; return `${U.pad(m)}:${U.pad(ss)}`; }
+};
+
+const overlay = document.getElementById('overlay');
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1900);
+}
+// 通用 sheet 控制
+function openSheet(el){ overlay.classList.add('show'); el.classList.add('show'); }
+function closeSheet(el){ overlay.classList.remove('show'); el.classList.remove('show'); }
+
+// 通用：CSS 网格热力图（value 越大颜色越深，0~4 级）
+function renderHeatmap(container, valueByDate, days){
+  days = days || 364;
+  const end = new Date(); end.setHours(0,0,0,0);
+  const start = new Date(end); start.setDate(start.getDate()-days);
+  // 对齐到周一为列首
+  const startDow = (start.getDay()+6)%7;
+  start.setDate(start.getDate()-startDow);
+  const vals = Object.values(valueByDate).filter(v=>v>0);
+  const max = vals.length ? Math.max(...vals) : 1;
+  const level = v => { if(!v) return 0; const r=v/max; if(r>.75)return 4; if(r>.5)return 3; if(r>.25)return 2; return 1; };
+  let html='<div class="heatmap">';
+  const cur=new Date(start);
+  while(cur<=end){
+    const iso=U.toISO(cur); const v=valueByDate[iso]||0; const lv=level(v);
+    html+=`<div class="heat-cell ${lv?'l'+lv:''}" title="${iso}：${v||0}"></div>`;
+    cur.setDate(cur.getDate()+1);
+  }
+  html+='</div>';
+  container.innerHTML = `<div class="heat-wrap">${html}</div>
+    <div class="heat-legend"><span>少</span>
+      <span class="hl-c heat-cell"></span><span class="hl-c heat-cell l1"></span>
+      <span class="hl-c heat-cell l2"></span><span class="hl-c heat-cell l3"></span>
+      <span class="hl-c heat-cell l4"></span><span>多</span></div>`;
+}
+</script>
+
+
+<!-- =========================================================================
+     js/app.js  —— 模块管理器：切换模块 + 调用初始化函数
+========================================================================= -->
+<script>
+const App = (function(){
+  // 模块注册表：元素 id / 初始化函数 / 标题 / 是否已初始化
+  const registry = {
+    dashboard:{ el:'module-dashboard', title:'仪表盘', init:()=>initDashboard(), _i:false },
+    reading:  { el:'module-reading',   title:'读书',   init:()=>initReading(),   _i:false },
+    fitness:  { el:'module-fitness',   title:'健身',   init:()=>initFitness(),   _i:false },
+    body:     { el:'module-body',      title:'身体',   init:()=>initBody(),      _i:false },
+    habits:   { el:'module-habits',    title:'习惯',   init:()=>initHabits(),    _i:false },
+    settings: { el:'module-settings',  title:'设置',   init:()=>initSettings(),  _i:false },
+  };
+  let current = null;
+
+  function switchModule(key){
+    const m = registry[key]; if(!m) return;
+    // 显隐
+    Object.values(registry).forEach(x=>document.getElementById(x.el).classList.remove('active'));
+    document.getElementById(m.el).classList.add('active');
+    // 导航高亮
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.module===key));
+    // 标题
+    document.getElementById('tbTitle').textContent = m.title;
+    // 初始化（首次）+ 每次进入刷新
+    m.init();
+    m._i = true;
+    current = key;
+    // 移动端：切换后收起侧边栏
+    closeSidebar();
+    window.scrollTo(0,0);
+  }
+
+  // 侧边栏开合（移动端）
+  function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('scrim').classList.add('show'); }
+  function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('scrim').classList.remove('show'); }
+
+  function boot(){
+    document.querySelectorAll('.nav-item').forEach(btn=>{
+      btn.addEventListener('click',()=>switchModule(btn.dataset.module));
+    });
+    document.getElementById('hamburger').addEventListener('click',openSidebar);
+    document.getElementById('scrim').addEventListener('click',closeSidebar);
+    overlay.addEventListener('click',()=>{ document.querySelectorAll('.sheet.show').forEach(closeSheet); });
+    switchModule('dashboard');
+  }
+  return { switchModule, boot };
+})();
+</script>
+
+
+<!-- =========================================================================
+     js/modules/dashboard.js  —— 仪表盘（读取各模块真实数据）
+========================================================================= -->
+<script>
+function initDashboard(){
+  const root = document.getElementById('module-dashboard');
+  const now = new Date();
+  const today = U.today();
+
+  // —— 读书今日数据 ——
+  const reading = Storage.get('reading_data', {records:[],books:[]});
+  const rToday = reading.records.filter(r=>r.date===today);
+  const rMin = rToday.reduce((s,r)=>s+Math.max(0,U.mins(r.end)-U.mins(r.start)),0);
+
+  // —— 健身今日数据 ——
+  const workouts = Storage.get('fitness_workouts', []);
+  const wToday = workouts.filter(w=>w.date===today);
+  const setsToday = wToday.reduce((s,w)=>s+w.exercises.reduce((a,e)=>a+e.sets.length,0),0);
+
+  // —— 身体最新体重 ——
+  const weights = Storage.get('body_weights', []).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const latest = weights[weights.length-1];
+
+  // —— 今日习惯（调用习惯模块暴露的全局方法） ——
+  const habit = (typeof window.getTodayHabitCompletion==='function') ? window.getTodayHabitCompletion() : {done:0,total:0};
+
+  root.innerHTML = `
+    <div class="today-banner">
+      <div class="tb-d">${now.getMonth()+1}月${now.getDate()}日</div>
+      <div class="tb-w">${now.getFullYear()} · ${U.weekdayCN(now)}</div>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card" data-go="reading">
+        <div class="dc-ico">📖</div><div class="dc-name">今日阅读</div>
+        <div class="dc-main">${rMin>0?Math.round(rMin):0}<span class="u">分钟</span></div>
+        <div class="dc-foot">${rToday.length} 条记录</div>
+      </div>
+      <div class="dash-card" data-go="fitness">
+        <div class="dc-ico">🏋️</div><div class="dc-name">今日训练</div>
+        <div class="dc-main">${wToday.length}<span class="u">次</span></div>
+        <div class="dc-foot">${setsToday} 组动作</div>
+      </div>
+      <div class="dash-card" data-go="habits">
+        <div class="dc-ico">✅</div><div class="dc-name">今日习惯</div>
+        <div class="dc-main">${habit.done}<span class="u">/${habit.total}</span></div>
+        <div class="dc-foot">${habit.total ? (habit.done>=habit.total?'全部完成 🎉':'已打卡 '+habit.done+' 个') : '暂无习惯'}</div>
+      </div>
+      <div class="dash-card" data-go="body">
+        <div class="dc-ico">⚖️</div><div class="dc-name">最新体重</div>
+        <div class="dc-main">${latest?latest.kg:'—'}<span class="u">${latest?'kg':''}</span></div>
+        <div class="dc-foot">${latest?latest.date:'暂无记录'}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:600;margin-bottom:4px;">读书活跃热力图</div>
+      <div class="hint" style="margin-bottom:12px;">近一年每日阅读时长</div>
+      <div id="heatReading"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:4px;">健身活跃热力图</div>
+      <div class="hint" style="margin-bottom:12px;">近一年每日训练组数</div>
+      <div id="heatFitness"></div>
+    </div>`;
+
+  // 卡片点击跳转
+  root.querySelectorAll('.dash-card').forEach(c=>{
+    c.addEventListener('click',()=>App.switchModule(c.dataset.go));
+  });
+
+  // 热力图数据
+  const readingByDate={};
+  reading.records.forEach(r=>{ readingByDate[r.date]=(readingByDate[r.date]||0)+Math.max(0,U.mins(r.end)-U.mins(r.start)); });
+  renderHeatmap(document.getElementById('heatReading'), readingByDate);
+
+  const fitnessByDate={};
+  workouts.forEach(w=>{ const sets=w.exercises.reduce((a,e)=>a+e.sets.length,0); fitnessByDate[w.date]=(fitnessByDate[w.date]||0)+sets; });
+  renderHeatmap(document.getElementById('heatFitness'), fitnessByDate);
+}
+</script>
+
+
+<!-- =========================================================================
+     js/modules/reading.js  —— 读书日历（移植自独立版，去页头/导航，走 storage）
+     导出 initReading()
+========================================================================= -->
+<script>
+(function(){
+  // 模块内部状态
+  let data;                       // {records, books}
+  let viewDate = new Date();
+  let selectedDate = U.today();
+  let subview = 'calendar';       // calendar | shelf | stats
+  let bound = false;
+  const MONTHS = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+  function loadData(){ data = Storage.get('reading_data', {records:[],books:[]}); if(!data.records)data.records=[]; if(!data.books)data.books=[]; }
+  function saveData(){ Storage.set('reading_data', data); }
+
+  // —— 对外初始化入口 ——
+  window.initReading = function(){
+    loadData();
+    const root = document.getElementById('module-reading');
+    if(!bound){ buildSkeleton(root); bound = true; }
+    renderSub();
+  };
+
+  function buildSkeleton(root){
+    root.innerHTML = `
+      <div class="page-head-row">
+        <div><div class="page-title">读书</div><div class="page-sub" id="rSub"></div></div>
+        <button class="add-btn" id="rAddBtn"><span class="plus">＋</span>添加记录</button>
+      </div>
+      <div class="seg" id="rSeg" style="margin-bottom:18px;">
+        <button data-s="calendar" class="on">日历</button>
+        <button data-s="shelf">书架</button>
+        <button data-s="stats">统计</button>
+      </div>
+      <div id="rBody"></div>`;
+
+    root.querySelector('#rAddBtn').addEventListener('click',()=>openRecordForm());
+    root.querySelectorAll('#rSeg button').forEach(b=>{
+      b.addEventListener('click',()=>{
+        subview=b.dataset.s;
+        root.querySelectorAll('#rSeg button').forEach(x=>x.classList.toggle('on',x===b));
+        renderSub();
+      });
+    });
+    buildSheets();
+  }
+
+  function renderSub(){
+    const sub=document.getElementById('rSub');
+    const body=document.getElementById('rBody');
+    if(subview==='calendar'){ sub.textContent='点击日期查看当日阅读'; renderCalendar(body); }
+    else if(subview==='shelf'){ sub.textContent=`书架 · 共 ${data.books.length} 本`; renderShelf(body); }
+    else { sub.textContent='本月阅读统计'; renderStats(body); }
+  }
+
+  /* ---------- 日历 ---------- */
+  function datesWithRecords(){ const s=new Set(); data.records.forEach(r=>s.add(r.date)); return s; }
+
+  function renderCalendar(body){
+    const y=viewDate.getFullYear(), m=viewDate.getMonth();
+    const first=new Date(y,m,1);
+    const startOffset=(first.getDay()+6)%7;
+    const dim=new Date(y,m+1,0).getDate();
+    const prevDim=new Date(y,m,0).getDate();
+    const recDates=datesWithRecords();
+    const today=U.today();
+
+    let cells='';
+    for(let i=startOffset-1;i>=0;i--) cells+=`<div class="cell other empty"><span class="num">${prevDim-i}</span></div>`;
+    for(let d=1;d<=dim;d++){
+      const iso=`${y}-${U.pad(m+1)}-${U.pad(d)}`;
+      let cls='cell'; if(iso===today)cls+=' today'; if(iso===selectedDate)cls+=' sel';
+      cells+=`<div class="${cls}" data-iso="${iso}"><span class="num">${d}</span>${recDates.has(iso)?'<span class="dot"></span>':''}</div>`;
+    }
+    const total=startOffset+dim, trailing=(7-total%7)%7;
+    for(let i=1;i<=trailing;i++) cells+=`<div class="cell other empty"><span class="num">${i}</span></div>`;
+
+    body.innerHTML=`
+      <div class="cal-card">
+        <div class="cal-head">
+          <button class="nav-btn" id="rPrev">‹</button>
+          <div class="cal-title">${MONTHS[m]}<span class="yr">${y}</span></div>
+          <button class="nav-btn" id="rNext">›</button>
+        </div>
+        <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span></div>
+        <div class="cal-grid">${cells}</div>
+      </div>
+      <div class="timeline-wrap" id="rTimeline"></div>`;
+
+    body.querySelector('#rPrev').addEventListener('click',()=>{ viewDate.setMonth(viewDate.getMonth()-1); renderCalendar(body); });
+    body.querySelector('#rNext').addEventListener('click',()=>{ viewDate.setMonth(viewDate.getMonth()+1); renderCalendar(body); });
+    body.querySelectorAll('.cell[data-iso]').forEach(c=>{
+      c.addEventListener('click',()=>{ selectedDate=c.dataset.iso; renderCalendar(body); });
+    });
+    renderTimeline(body.querySelector('#rTimeline'));
+  }
+
+  function recDur(r){ return Math.max(0,U.mins(r.end)-U.mins(r.start)); }
+
+  function renderTimeline(wrap){
+    const recs=data.records.filter(r=>r.date===selectedDate).sort((a,b)=>U.mins(a.start)-U.mins(b.start));
+    const d=U.parseISO(selectedDate);
+    const label=`${d.getMonth()+1}月${d.getDate()}日 · ${U.weekdayCN(d)}`;
+    if(!recs.length){
+      wrap.innerHTML=`<div class="tl-head"><span class="tl-date">${label}</span></div>
+        <div class="empty-state"><div class="em-ill">空</div><p>这一天还没有阅读记录<br>点击「添加记录」写下今天读了什么</p></div>`;
+      return;
+    }
+    const tot=recs.reduce((s,r)=>s+recDur(r),0);
+    let html=`<div class="tl-head"><span class="tl-date">${label}</span><span class="tl-meta">${recs.length} 条 · 共 ${U.fmtDur(tot)}</span></div>
+      <div class="tl-hint">点按任意记录可编辑或删除</div><div class="timeline">`;
+    recs.forEach(r=>{
+      const isD=r.medium==='电子';
+      const pg=(!isD&&r.pagesRead)?`<span class="pages">${r.pagesRead} 页</span>`:'';
+      html+=`<div class="tl-item ${isD?'digital':''}" data-id="${r.id}">
+        <div class="tl-time">${r.start}<span class="end">${r.end}</span></div>
+        <div class="tl-node"></div>
+        <div class="tl-card">
+          <div class="tl-book">${U.esc(r.bookName)}</div>
+          <div class="tl-tags"><span class="chip ${isD?'digital':'paper'}">${r.medium}</span><span class="dur">${U.fmtDur(recDur(r))}</span>${pg}</div>
+        </div></div>`;
+    });
+    html+='</div>';
+    wrap.innerHTML=html;
+    wrap.querySelectorAll('.tl-item').forEach(it=>it.addEventListener('click',()=>openRecordForm(Number(it.dataset.id))));
+  }
+
+  /* ---------- 书架 ---------- */
+  function bookAgg(name){
+    const recs=data.records.filter(r=>r.bookName===name);
+    return { count:recs.length, totalMin:recs.reduce((s,r)=>s+recDur(r),0), pages:recs.reduce((s,r)=>s+(Number(r.pagesRead)||0),0) };
+  }
+  function renderShelf(body){
+    if(!data.books.length){
+      body.innerHTML=`<div style="text-align:right;margin-bottom:12px;"><button class="add-btn" id="rAddBook"><span class="plus">＋</span>添加书籍</button></div>
+        <div class="empty-state"><div class="em-ill">书</div><p>书架还是空的<br>添加阅读记录或点「添加书籍」建档</p></div>`;
+      body.querySelector('#rAddBook').addEventListener('click',()=>openBookForm());
+      return;
+    }
+    let html=`<div style="text-align:right;margin-bottom:12px;"><button class="add-btn" id="rAddBook"><span class="plus">＋</span>添加书籍</button></div>
+      <div class="tl-hint" style="padding:0 4px 8px;">点按书籍可编辑或删除</div><div class="book-list">`;
+    data.books.forEach(b=>{
+      const ag=bookAgg(b.name); const paper=b.medium==='纸质';
+      let prog;
+      if(paper){
+        if(b.totalPages>0){ const pct=Math.min(100,Math.round(ag.pages/b.totalPages*100));
+          prog=`<div class="progress"><div class="bar"><div class="fill" style="width:${pct}%"></div></div><div class="lbl"><span>${ag.pages} / ${b.totalPages} 页</span><span>${pct}%</span></div></div>`;
+        } else prog=`<div class="progress"><div class="lbl"><span>已读 ${ag.pages} 页</span><span>未设置总页数</span></div></div>`;
+      } else prog=`<div class="progress"><div class="lbl"><span>电子书</span><span>无页数进度</span></div></div>`;
+      html+=`<div class="book" data-book="${U.esc(b.name)}">
+        <div class="book-top"><div class="book-name">${U.esc(b.name)}</div><span class="chip ${paper?'paper':'digital'}">${b.medium}</span></div>
+        <div class="book-stats">
+          <div class="stat"><span class="v">${ag.count}</span><span class="l">阅读次数</span></div>
+          <div class="stat"><span class="v">${ag.totalMin}</span><span class="l">总时长(分)</span></div>
+          ${paper?`<div class="stat"><span class="v">${ag.pages}</span><span class="l">累计页数</span></div>`:''}
+        </div>${prog}</div>`;
+    });
+    html+='</div>';
+    body.innerHTML=html;
+    body.querySelector('#rAddBook').addEventListener('click',()=>openBookForm());
+    body.querySelectorAll('.book[data-book]').forEach(c=>c.addEventListener('click',()=>openBookForm(c.dataset.book)));
+  }
+
+  /* ---------- 统计 ---------- */
+  function currentStreak(){
+    const days=datesWithRecords(); if(!days.size)return 0;
+    let cur=new Date();
+    if(!days.has(U.toISO(cur))){ cur.setDate(cur.getDate()-1); if(!days.has(U.toISO(cur)))return 0; }
+    let n=0; while(days.has(U.toISO(cur))){ n++; cur.setDate(cur.getDate()-1); } return n;
+  }
+  function renderStats(body){
+    const y=viewDate.getFullYear(), m=viewDate.getMonth(), prefix=`${y}-${U.pad(m+1)}`;
+    const mr=data.records.filter(r=>r.date.indexOf(prefix)===0);
+    const tot=mr.reduce((s,r)=>s+recDur(r),0);
+    const hours=(tot/60).toFixed(1).replace(/\.0$/,'');
+    const paper=mr.filter(r=>r.medium==='纸质').reduce((s,r)=>s+recDur(r),0);
+    const digital=mr.filter(r=>r.medium==='电子').reduce((s,r)=>s+recDur(r),0);
+    body.innerHTML=`
+      <div class="stat-row" style="margin-bottom:14px;">
+        <div class="stat-box"><div class="big">${hours}<span class="u">小时</span></div><div class="lbl">${MONTHS[m]}总阅读</div></div>
+        <div class="stat-box"><div class="big">${currentStreak()}<span class="u">天</span></div><div class="lbl">连续阅读 🔥</div></div>
+      </div>
+      <div class="card"><div style="font-weight:600;margin-bottom:2px;">纸质 vs 电子</div><div class="hint" style="margin-bottom:12px;">${MONTHS[m]}时长占比</div>
+        <div class="pie-area"><canvas id="rPie" width="148" height="148"></canvas><div class="legend" id="rLegend"></div></div></div>`;
+    drawPie(document.getElementById('rPie'), document.getElementById('rLegend'), paper, digital);
+  }
+  function drawPie(cv, legend, paper, digital){
+    const ctx=cv.getContext('2d'), W=cv.width,H=cv.height,cx=W/2,cy=H/2,R=64,r=38,total=paper+digital;
+    ctx.clearRect(0,0,W,H);
+    if(!total){
+      ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.fillStyle='#EFE8DA';ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fillStyle='#F6F2EA';ctx.fill();
+      ctx.fillStyle='#A8A095';ctx.font="12px 'Noto Sans SC'";ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('暂无数据',cx,cy);
+      legend.innerHTML='<div class="lg-v">本月还没有阅读记录</div>'; return;
+    }
+    let ang=-Math.PI/2;
+    [['#C2873B',paper],['#5E8C7B',digital]].forEach(([c,v])=>{ if(!v)return; const a=v/total*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,R,ang,ang+a);ctx.closePath();ctx.fillStyle=c;ctx.fill();ang+=a; });
+    ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fillStyle='#FFFDF7';ctx.fill();
+    ctx.fillStyle='#3A332C';ctx.font="600 17px 'Noto Serif SC'";ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(`${Math.round(total/60*10)/10}h`,cx,cy-6);
+    ctx.fillStyle='#7C746A';ctx.font="10px 'Noto Sans SC'";ctx.fillText('总计',cx,cy+10);
+    legend.innerHTML=[['纸质',paper,'#C2873B'],['电子',digital,'#5E8C7B']].map(([k,v,c])=>{
+      const pct=Math.round(v/total*100);
+      return `<div class="lg"><span class="sw" style="background:${c}"></span><div><div class="lg-k">${k}</div><div class="lg-v">${U.fmtDur(v)} · ${pct}%</div></div></div>`;
+    }).join('');
+  }
+
+  /* ---------- 弹窗：记录 & 书籍 ---------- */
+  let recSheet, bookSheet, currentMedium='纸质', bookMedium='纸质';
+  let recDelArmed=false,recDelTimer, bookDelArmed=false,bookDelTimer;
+
+  function buildSheets(){
+    // 记录弹窗
+    recSheet=document.createElement('div'); recSheet.className='sheet'; recSheet.id='rRecSheet';
+    let hOpts=Array.from({length:24},(_,h)=>`<option>${U.pad(h)}</option>`).join('');
+    let mOpts=Array.from({length:12},(_,i)=>`<option>${U.pad(i*5)}</option>`).join('');
+    recSheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3 id="rRecTitle">添加阅读记录</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><form id="rRecForm" autocomplete="off"><input type="hidden" id="rEditId">
+        <div class="field"><label>日期</label><input type="date" id="rfDate" required></div>
+        <div class="field suggest"><label>书名</label><input type="text" id="rfBook" placeholder="输入或选择书名" required><div class="suggest-list" id="rSug"></div></div>
+        <div class="field"><label>阅读时间</label><div class="row-2">
+          <div><div class="time-selects"><select id="rfSH">${hOpts}</select><span class="colon">:</span><select id="rfSM">${mOpts}</select></div><div class="hint" style="text-align:center;margin-top:5px;">开始</div></div>
+          <div><div class="time-selects"><select id="rfEH">${hOpts}</select><span class="colon">:</span><select id="rfEM">${mOpts}</select></div><div class="hint" style="text-align:center;margin-top:5px;">结束</div></div>
+        </div><span class="dur-badge" id="rDur">时长 0 分钟</span></div>
+        <div class="field"><label>阅读媒介</label><div class="seg" id="rMed"><button type="button" data-m="纸质" class="on">📖 纸质</button><button type="button" data-m="电子">📱 电子书</button></div></div>
+        <div class="field" id="rPagesField"><label>本次阅读页数</label><input type="number" id="rfPages" min="0" placeholder="例如 24"></div>
+        <div class="form-actions"><button type="button" class="btn btn-danger hidden" id="rDel">删除</button><button type="submit" class="btn btn-primary" id="rSave">保存记录</button></div>
+      </form></div>`;
+    document.body.appendChild(recSheet);
+
+    // 书籍弹窗
+    bookSheet=document.createElement('div'); bookSheet.className='sheet'; bookSheet.id='rBookSheet';
+    bookSheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3 id="rBookTitle">添加书籍</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><form id="rBookForm" autocomplete="off"><input type="hidden" id="rBookEdit">
+        <div class="field"><label>书名</label><input type="text" id="bfName" placeholder="输入书名" required></div>
+        <div class="field"><label>阅读媒介</label><div class="seg" id="bMed"><button type="button" data-m="纸质" class="on">📖 纸质</button><button type="button" data-m="电子">📱 电子书</button></div></div>
+        <div class="field" id="bPagesField"><label>总页数（用于计算进度）</label><input type="number" id="bfPages" min="1" placeholder="例如 350"></div>
+        <div class="form-actions"><button type="button" class="btn btn-danger hidden" id="bDel">删除</button><button type="submit" class="btn btn-primary" id="bSave">保存书籍</button></div>
+        <div class="hint" id="bDelHint" style="margin-top:12px;display:none;">删除书籍会同时删除它的全部阅读记录，操作不可撤销。</div>
+      </form></div>`;
+    document.body.appendChild(bookSheet);
+
+    bindRecSheet(); bindBookSheet();
+  }
+
+  // —— 记录弹窗逻辑 ——
+  function getRT(p){ return `${document.getElementById(p+'H').value}:${document.getElementById(p+'M').value}`; }
+  function setRT(p,t){ const [h,m]=t.split(':'); document.getElementById(p+'H').value=h; document.getElementById(p+'M').value=m; }
+  function updateRecDur(){ const d=U.mins(getRT('rfE'))-U.mins(getRT('rfS')); const b=document.getElementById('rDur');
+    if(d<=0){ b.classList.add('warn'); b.textContent='结束需晚于开始'; } else { b.classList.remove('warn'); b.textContent='时长 '+U.fmtDur(d); } }
+  function setRecMedium(m){ currentMedium=m; recSheet.querySelectorAll('#rMed button').forEach(x=>x.classList.toggle('on',x.dataset.m===m)); document.getElementById('rPagesField').classList.toggle('hidden',m!=='纸质'); }
+  function resetRecDel(){ recDelArmed=false; clearTimeout(recDelTimer); const d=document.getElementById('rDel'); d.textContent='删除'; d.classList.remove('armed'); }
+
+  function bindRecSheet(){
+    recSheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(recSheet));
+    ['rfSH','rfSM','rfEH','rfEM'].forEach(id=>document.getElementById(id).addEventListener('change',updateRecDur));
+    recSheet.querySelectorAll('#rMed button').forEach(b=>b.addEventListener('click',()=>setRecMedium(b.dataset.m)));
+    // 书名联想
+    const inp=document.getElementById('rfBook'), sug=document.getElementById('rSug');
+    inp.addEventListener('input',()=>{
+      const q=inp.value.trim(); if(!q){ sug.classList.remove('show'); return; }
+      const matches=data.books.filter(b=>b.name.indexOf(q)>=0);
+      const exact=data.books.some(b=>b.name===q);
+      let h=matches.map(b=>`<div class="opt" data-name="${U.esc(b.name)}" data-medium="${b.medium}">${U.esc(b.name)} <span class="hint">${b.medium}</span></div>`).join('');
+      if(!exact) h+=`<div class="opt" data-name="${U.esc(q)}" data-new="1">「${U.esc(q)}」<span class="new-tag">+ 新建书籍</span></div>`;
+      sug.innerHTML=h; sug.classList.toggle('show',!!h);
+    });
+    sug.addEventListener('click',e=>{ const o=e.target.closest('.opt'); if(!o)return; inp.value=o.dataset.name; if(!o.dataset.new&&o.dataset.medium)setRecMedium(o.dataset.medium); sug.classList.remove('show'); });
+    document.addEventListener('click',e=>{ if(!e.target.closest('#rRecSheet .suggest')) sug.classList.remove('show'); });
+    // 删除（两步）
+    document.getElementById('rDel').addEventListener('click',()=>{
+      const id=Number(document.getElementById('rEditId').value); if(!id)return;
+      if(!recDelArmed){ recDelArmed=true; const d=document.getElementById('rDel'); d.textContent='确认删除？'; d.classList.add('armed'); clearTimeout(recDelTimer); recDelTimer=setTimeout(resetRecDel,3000); return; }
+      data.records=data.records.filter(r=>r.id!==id); saveData(); resetRecDel(); closeSheet(recSheet); renderSub(); toast('记录已删除');
+    });
+    // 提交
+    document.getElementById('rRecForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const date=document.getElementById('rfDate').value, book=document.getElementById('rfBook').value.trim();
+      const start=getRT('rfS'), end=getRT('rfE');
+      if(!book){ toast('请填写书名'); return; }
+      if(U.mins(end)-U.mins(start)<=0){ toast('结束时间需晚于开始时间'); return; }
+      const pages=currentMedium==='纸质' && document.getElementById('rfPages').value!=='' ? Number(document.getElementById('rfPages').value) : null;
+      const id=document.getElementById('rEditId').value;
+      if(id){ const r=data.records.find(x=>x.id===Number(id)); Object.assign(r,{date,bookName:book,start,end,medium:currentMedium,pagesRead:pages}); }
+      else data.records.push({id:U.uid(),date,bookName:book,start,end,medium:currentMedium,pagesRead:pages});
+      // 维护书籍库
+      if(!data.books.find(b=>b.name===book)) data.books.push({name:book,totalPages:null,medium:currentMedium});
+      saveData(); closeSheet(recSheet);
+      selectedDate=date; viewDate=U.parseISO(date); subview='calendar';
+      document.querySelectorAll('#rSeg button').forEach(x=>x.classList.toggle('on',x.dataset.s==='calendar'));
+      renderSub(); toast(id?'已保存修改':'记录已添加');
+    });
+  }
+  function openRecordForm(editId){
+    document.getElementById('rRecForm').reset(); document.getElementById('rSug').classList.remove('show'); resetRecDel();
+    if(editId){ const r=data.records.find(x=>x.id===editId); if(!r)return;
+      document.getElementById('rRecTitle').textContent='编辑阅读记录'; document.getElementById('rEditId').value=r.id;
+      document.getElementById('rfDate').value=r.date; document.getElementById('rfBook').value=r.bookName;
+      setRT('rfS',r.start); setRT('rfE',r.end); setRecMedium(r.medium);
+      document.getElementById('rfPages').value=r.pagesRead??''; document.getElementById('rDel').classList.remove('hidden');
+      document.getElementById('rSave').textContent='保存修改';
+    } else {
+      document.getElementById('rRecTitle').textContent='添加阅读记录'; document.getElementById('rEditId').value='';
+      document.getElementById('rfDate').value=selectedDate||U.today(); setRT('rfS','08:00'); setRT('rfE','08:30'); setRecMedium('纸质');
+      document.getElementById('rDel').classList.add('hidden'); document.getElementById('rSave').textContent='保存记录';
+    }
+    updateRecDur(); openSheet(recSheet);
+  }
+
+  // —— 书籍弹窗逻辑 ——
+  function setBookMedium(m){ bookMedium=m; bookSheet.querySelectorAll('#bMed button').forEach(x=>x.classList.toggle('on',x.dataset.m===m)); document.getElementById('bPagesField').classList.toggle('hidden',m!=='纸质'); }
+  function resetBookDel(){ bookDelArmed=false; clearTimeout(bookDelTimer); const d=document.getElementById('bDel'); d.textContent='删除'; d.classList.remove('armed'); }
+  function bindBookSheet(){
+    bookSheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(bookSheet));
+    bookSheet.querySelectorAll('#bMed button').forEach(b=>b.addEventListener('click',()=>setBookMedium(b.dataset.m)));
+    document.getElementById('bDel').addEventListener('click',()=>{
+      const name=document.getElementById('rBookEdit').value; if(!name)return;
+      if(!bookDelArmed){ bookDelArmed=true; const cnt=data.records.filter(r=>r.bookName===name).length; const d=document.getElementById('bDel'); d.textContent=cnt?`确认删除？含${cnt}条`:'确认删除？'; d.classList.add('armed'); clearTimeout(bookDelTimer); bookDelTimer=setTimeout(resetBookDel,3500); return; }
+      data.books=data.books.filter(b=>b.name!==name); data.records=data.records.filter(r=>r.bookName!==name);
+      saveData(); resetBookDel(); closeSheet(bookSheet); renderSub(); toast('书籍及其记录已删除');
+    });
+    document.getElementById('rBookForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const newName=document.getElementById('bfName').value.trim(), oldName=document.getElementById('rBookEdit').value;
+      if(!newName){ toast('请填写书名'); return; }
+      const pages=bookMedium==='纸质' && document.getElementById('bfPages').value!=='' ? Number(document.getElementById('bfPages').value) : null;
+      if(data.books.some(b=>b.name===newName && b.name!==oldName)){ toast('已存在同名书籍'); return; }
+      if(oldName){ const b=data.books.find(x=>x.name===oldName);
+        if(b){ if(newName!==oldName) data.records.forEach(r=>{ if(r.bookName===oldName)r.bookName=newName; }); b.name=newName; b.medium=bookMedium; b.totalPages=pages; }
+      } else data.books.push({name:newName,totalPages:pages,medium:bookMedium});
+      saveData(); closeSheet(bookSheet); renderSub(); toast(oldName?'已保存修改':'书籍已添加');
+    });
+  }
+  function openBookForm(name){
+    document.getElementById('rBookForm').reset(); resetBookDel();
+    if(name){ const b=data.books.find(x=>x.name===name); if(!b)return;
+      document.getElementById('rBookTitle').textContent='编辑书籍'; document.getElementById('rBookEdit').value=b.name;
+      document.getElementById('bfName').value=b.name; setBookMedium(b.medium||'纸质'); document.getElementById('bfPages').value=b.totalPages??'';
+      document.getElementById('bDel').classList.remove('hidden'); document.getElementById('bDelHint').style.display='block'; document.getElementById('bSave').textContent='保存修改';
+    } else {
+      document.getElementById('rBookTitle').textContent='添加书籍'; document.getElementById('rBookEdit').value=''; setBookMedium('纸质');
+      document.getElementById('bDel').classList.add('hidden'); document.getElementById('bDelHint').style.display='none'; document.getElementById('bSave').textContent='保存书籍';
+    }
+    openSheet(bookSheet);
+  }
+})();
+</script>
+
+
+<!-- =========================================================================
+     js/modules/fitness.js  —— 健身（训练记录 / 动作库 / 休息计时）
+     导出 initFitness()
+========================================================================= -->
+<script>
+(function(){
+  let workouts, exercises, active;     // 数据
+  let subview='train', bound=false;
+  let restTimer=null, restSec=0, restTargetSet=null;   // 休息计时
+  let workoutTick=null;
+  const DEFAULT_EX=[
+    {id:1,name:'卧推',category:'胸'},{id:2,name:'深蹲',category:'腿'},{id:3,name:'硬拉',category:'背'},
+    {id:4,name:'引体向上',category:'背'},{id:5,name:'肩上推举',category:'肩'},{id:6,name:'弯举',category:'手臂'}
+  ];
+  const TEMPLATES={
+    '推（胸肩三头）':['卧推','肩上推举'],
+    '拉（背二头）':['硬拉','引体向上','弯举'],
+    '腿':['深蹲']
+  };
+
+  function loadData(){
+    workouts=Storage.get('fitness_workouts',[]);
+    exercises=Storage.get('fitness_exercises',null); if(!exercises){ exercises=DEFAULT_EX.slice(); Storage.set('fitness_exercises',exercises); }
+    active=Storage.get('fitness_active',null);
+  }
+  function saveWorkouts(){ Storage.set('fitness_workouts',workouts); }
+  function saveExercises(){ Storage.set('fitness_exercises',exercises); }
+  function saveActive(){ Storage.set('fitness_active',active); }
+
+  window.initFitness=function(){
+    loadData();
+    const root=document.getElementById('module-fitness');
+    if(!bound){
+      root.innerHTML=`
+        <div class="page-head-row"><div><div class="page-title">健身</div><div class="page-sub" id="fSub"></div></div></div>
+        <div class="seg" id="fSeg" style="margin-bottom:18px;">
+          <button data-s="train" class="on">训练记录</button>
+          <button data-s="lib">动作库</button>
+        </div>
+        <div id="fBody"></div>`;
+      root.querySelectorAll('#fSeg button').forEach(b=>b.addEventListener('click',()=>{
+        subview=b.dataset.s; root.querySelectorAll('#fSeg button').forEach(x=>x.classList.toggle('on',x===b)); renderSub();
+      }));
+      buildExSheet();
+      bound=true;
+    }
+    renderSub();
+  };
+
+  function renderSub(){
+    const body=document.getElementById('fBody'), sub=document.getElementById('fSub');
+    if(subview==='train'){ sub.textContent= active?'训练进行中…':'记录每次训练'; active?renderActive(body):renderTrainHome(body); }
+    else { sub.textContent=`动作库 · 共 ${exercises.length} 个动作`; renderLib(body); }
+  }
+
+  /* ---------- 训练首页 ---------- */
+  function renderTrainHome(body){
+    const tmpl=Object.keys(TEMPLATES).map(t=>`<div class="tmpl-chip" data-t="${U.esc(t)}">${U.esc(t)}</div>`).join('');
+    let hist='';
+    const sorted=workouts.slice().sort((a,b)=>b.startTs-a.startTs);
+    if(!sorted.length) hist=`<div class="empty-state"><div class="em-ill">练</div><p>还没有训练记录<br>点「开始训练」记录第一次</p></div>`;
+    else hist=`<div class="workout-list">`+sorted.map(w=>{
+      const sets=w.exercises.reduce((a,e)=>a+e.sets.length,0);
+      const vol=w.exercises.reduce((a,e)=>a+e.sets.reduce((s,x)=>s+(x.reps*x.weight||0),0),0);
+      const exNames=w.exercises.map(e=>e.name).join('、');
+      const d=U.parseISO(w.date);
+      return `<div class="workout-card" data-id="${w.id}">
+        <div class="wc-top"><span class="wc-date">${d.getMonth()+1}月${d.getDate()}日 ${U.weekdayCN(d)}</span><span class="chip muted">${Math.round((w.durationSec||0)/60)} 分钟</span></div>
+        <div class="wc-sum">${w.exercises.length} 个动作 · ${sets} 组 · 总容量 ${Math.round(vol)} kg</div>
+        <div class="wc-ex">${U.esc(exNames)||'—'}</div></div>`;
+    }).join('')+`</div>`;
+
+    body.innerHTML=`
+      <button class="btn btn-primary btn-lg btn-block" id="fStart">＋ 开始训练</button>
+      <div class="hint" style="margin:14px 0 8px;">快速模板（点击直接开练）</div>
+      <div class="tmpl-row">${tmpl}</div>
+      <div style="margin-top:18px;font-weight:600;">历史训练</div>
+      <div style="margin-top:10px;">${hist}</div>`;
+
+    body.querySelector('#fStart').addEventListener('click',()=>startWorkout());
+    body.querySelectorAll('.tmpl-chip').forEach(c=>c.addEventListener('click',()=>startWorkout(TEMPLATES[c.dataset.t])));
+    body.querySelectorAll('.workout-card').forEach(c=>c.addEventListener('click',()=>openWorkoutDetail(Number(c.dataset.id))));
+  }
+
+  function startWorkout(presetNames){
+    active={ id:U.uid(), date:U.today(), startTs:Date.now(), exercises:[] };
+    if(presetNames) presetNames.forEach(n=>active.exercises.push({name:n,sets:[]}));
+    saveActive(); renderSub();
+  }
+
+  /* ---------- 进行中的训练 ---------- */
+  function renderActive(body){
+    let exs=active.exercises.map((ex,ei)=>{
+      const sets=ex.sets.map((s,si)=>`<div class="set-row"><span class="si">${si+1}</span><span class="sv">${s.reps} 次 × ${s.weight} kg</span>${s.restSec!=null?`<span class="rest">休息 ${U.fmtClock(s.restSec)}</span>`:''}<span class="del-set" data-ei="${ei}" data-si="${si}">✕</span></div>`).join('');
+      return `<div class="ex-block" data-ei="${ei}">
+        <div class="ex-name">${U.esc(ex.name)}<span class="rm" data-rm="${ei}">移除</span></div>
+        <div class="set-list">${sets||'<span class="hint">还没有组，点下方添加</span>'}</div>
+        <div class="set-input">
+          <div class="si-col"><label>次数</label><div class="stepper"><button data-step="reps" data-ei="${ei}" data-d="-1">−</button><input type="number" id="reps-${ei}" value="10" min="0"><button data-step="reps" data-ei="${ei}" data-d="1">+</button></div></div>
+          <div class="si-col"><label>重量(kg)</label><div class="stepper"><button data-step="weight" data-ei="${ei}" data-d="-2.5">−</button><input type="number" id="weight-${ei}" value="20" min="0" step="0.5"><button data-step="weight" data-ei="${ei}" data-d="2.5">+</button></div></div>
+          <button class="btn btn-primary" style="min-height:48px;" data-addset="${ei}">添加组</button>
+        </div></div>`;
+    }).join('');
+
+    body.innerHTML=`
+      <div class="active-workout">
+        <div class="aw-head">
+          <div class="aw-timer"><span class="lbl">训练时长</span><span id="fElapsed">00:00</span></div>
+          <button class="btn btn-primary" id="fFinish">完成训练</button>
+        </div>
+        ${exs||'<div class="hint" style="margin:6px 0 12px;">还没有动作，点下方添加</div>'}
+        <button class="btn btn-ghost btn-block" id="fAddEx" style="margin-top:6px;">＋ 添加动作</button>
+        <button class="btn btn-danger btn-block" id="fCancel" style="margin-top:10px;">放弃本次训练</button>
+        <div id="fRest"></div>
+      </div>`;
+
+    // 训练计时
+    updateElapsed(); clearInterval(workoutTick); workoutTick=setInterval(updateElapsed,1000);
+    // 绑定
+    body.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{
+      const inp=document.getElementById(b.dataset.step+'-'+b.dataset.ei); inp.value=Math.max(0,(parseFloat(inp.value)||0)+parseFloat(b.dataset.d));
+    }));
+    body.querySelectorAll('[data-addset]').forEach(b=>b.addEventListener('click',()=>addSet(Number(b.dataset.addset))));
+    body.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ active.exercises.splice(Number(b.dataset.rm),1); saveActive(); renderSub(); }));
+    body.querySelectorAll('.del-set').forEach(b=>b.addEventListener('click',()=>{ active.exercises[Number(b.dataset.ei)].sets.splice(Number(b.dataset.si),1); saveActive(); renderSub(); }));
+    body.querySelector('#fAddEx').addEventListener('click',openExPicker);
+    body.querySelector('#fFinish').addEventListener('click',finishWorkout);
+    body.querySelector('#fCancel').addEventListener('click',cancelWorkout);
+
+    if(restTimer) renderRestBanner();   // 计时器仍在跑则重绘
+  }
+
+  function updateElapsed(){ const el=document.getElementById('fElapsed'); if(!el){ clearInterval(workoutTick); return; } el.textContent=U.fmtClock(Math.floor((Date.now()-active.startTs)/1000)); }
+
+  function addSet(ei){
+    const reps=Math.max(0,parseInt(document.getElementById('reps-'+ei).value)||0);
+    const weight=Math.max(0,parseFloat(document.getElementById('weight-'+ei).value)||0);
+    if(reps<=0){ toast('请填写次数'); return; }
+    // 记录上一组的实际休息秒数
+    commitRest();
+    const set={reps,weight,restSec:null};
+    active.exercises[ei].sets.push(set);
+    saveActive();
+    // 启动休息计时，目标为这一组（休息计入这一组之后）
+    startRest(set);
+    renderSub();
+  }
+
+  /* ---------- 休息计时（setInterval，记录实际秒数） ---------- */
+  function startRest(set){
+    stopRestInterval(); restSec=0; restTargetSet=set;
+    restTimer=setInterval(()=>{ restSec++; const t=document.getElementById('fRestT'); if(t)t.textContent=U.fmtClock(restSec); },1000);
+  }
+  function stopRestInterval(){ if(restTimer){ clearInterval(restTimer); restTimer=null; } }
+  function commitRest(){ if(restTargetSet){ restTargetSet.restSec=restSec; saveActive(); } stopRestInterval(); restTargetSet=null; restSec=0; }
+  function renderRestBanner(){
+    const host=document.getElementById('fRest'); if(!host)return;
+    host.innerHTML=`<div class="rest-banner"><div><div class="rb-t" id="fRestT">${U.fmtClock(restSec)}</div><div class="rb-l">休息计时（自动记录）</div></div>
+      <div class="rb-actions"><button id="fRestPlus">+15s</button><button id="fRestDone">结束休息</button></div></div>`;
+    host.querySelector('#fRestPlus').addEventListener('click',()=>{ restSec+=15; document.getElementById('fRestT').textContent=U.fmtClock(restSec); });
+    host.querySelector('#fRestDone').addEventListener('click',()=>{ commitRest(); renderSub(); });
+  }
+
+  function finishWorkout(){
+    commitRest();
+    const hasSet=active.exercises.some(e=>e.sets.length);
+    if(!hasSet){ toast('还没有任何训练组'); return; }
+    active.endTs=Date.now(); active.durationSec=Math.floor((active.endTs-active.startTs)/1000);
+    workouts.push(active); saveWorkouts();
+    active=null; Storage.remove('fitness_active'); clearInterval(workoutTick);
+    renderSub(); toast('训练已完成 💪');
+  }
+  let cancelArmed=false,cancelTimer;
+  function cancelWorkout(){
+    const btn=document.getElementById('fCancel');
+    if(!cancelArmed){ cancelArmed=true; btn.classList.add('armed'); btn.textContent='确认放弃？不会保存'; clearTimeout(cancelTimer); cancelTimer=setTimeout(()=>{cancelArmed=false;btn.classList.remove('armed');btn.textContent='放弃本次训练';},3000); return; }
+    commitRest(); active=null; Storage.remove('fitness_active'); clearInterval(workoutTick); cancelArmed=false; renderSub(); toast('已放弃本次训练');
+  }
+
+  /* ---------- 历史训练详情 ---------- */
+  let detailSheet;
+  function openWorkoutDetail(id){
+    const w=workouts.find(x=>x.id===id); if(!w)return;
+    if(!detailSheet){ detailSheet=document.createElement('div'); detailSheet.className='sheet'; document.body.appendChild(detailSheet); }
+    const d=U.parseISO(w.date);
+    const body=w.exercises.map(e=>{
+      const sets=e.sets.map((s,i)=>`<div class="set-row"><span class="si">${i+1}</span><span class="sv">${s.reps} 次 × ${s.weight} kg</span>${s.restSec!=null?`<span class="rest">休息 ${U.fmtClock(s.restSec)}</span>`:''}</div>`).join('');
+      return `<div class="ex-block"><div class="ex-name">${U.esc(e.name)}</div><div class="set-list">${sets||'<span class="hint">无组</span>'}</div></div>`;
+    }).join('');
+    detailSheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3>${d.getMonth()+1}月${d.getDate()}日 训练</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><div class="hint" style="margin-bottom:14px;">用时 ${Math.round((w.durationSec||0)/60)} 分钟</div>${body||'<div class="hint">无内容</div>'}
+        <button class="btn btn-danger btn-block" id="fDelW" style="margin-top:8px;">删除这次训练</button></div>`;
+    detailSheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(detailSheet));
+    let armed=false,t;
+    detailSheet.querySelector('#fDelW').addEventListener('click',(e)=>{
+      const btn=e.target;
+      if(!armed){ armed=true; btn.classList.add('armed'); btn.textContent='确认删除？'; clearTimeout(t); t=setTimeout(()=>{armed=false;btn.classList.remove('armed');btn.textContent='删除这次训练';},3000); return; }
+      workouts=workouts.filter(x=>x.id!==id); saveWorkouts(); closeSheet(detailSheet); renderSub(); toast('训练已删除');
+    });
+    openSheet(detailSheet);
+  }
+
+  /* ---------- 动作库 ---------- */
+  function renderLib(body){
+    let html=`<div style="text-align:right;margin-bottom:12px;"><button class="add-btn" id="fAddLib"><span class="plus">＋</span>添加动作</button></div>`;
+    if(!exercises.length) html+=`<div class="empty-state"><div class="em-ill">动</div><p>动作库是空的</p></div>`;
+    else html+=exercises.map(e=>`<div class="ex-lib-item" data-id="${e.id}"><span>${U.esc(e.name)}</span><span class="eli-cat">${U.esc(e.category||'未分类')}</span></div>`).join('');
+    body.innerHTML=html;
+    body.querySelector('#fAddLib').addEventListener('click',()=>openExForm());
+    body.querySelectorAll('.ex-lib-item').forEach(it=>it.addEventListener('click',()=>openExForm(Number(it.dataset.id))));
+  }
+
+  // 动作 新增/编辑 弹窗
+  let exSheet, exPicker;
+  function buildExSheet(){
+    exSheet=document.createElement('div'); exSheet.className='sheet';
+    exSheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3 id="fExTitle">添加动作</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><form id="fExForm" autocomplete="off"><input type="hidden" id="fExId">
+        <div class="field"><label>动作名称</label><input type="text" id="fExName" placeholder="例如 卧推" required></div>
+        <div class="field"><label>部位 / 分类</label><input type="text" id="fExCat" placeholder="例如 胸"></div>
+        <div class="form-actions"><button type="button" class="btn btn-danger hidden" id="fExDel">删除</button><button type="submit" class="btn btn-primary">保存</button></div>
+      </form></div>`;
+    document.body.appendChild(exSheet);
+    exSheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(exSheet));
+    let armed=false,t;
+    document.getElementById('fExDel').addEventListener('click',(e)=>{
+      const id=Number(document.getElementById('fExId').value); if(!id)return; const btn=e.target;
+      if(!armed){ armed=true; btn.classList.add('armed'); btn.textContent='确认删除？'; clearTimeout(t); t=setTimeout(()=>{armed=false;btn.classList.remove('armed');btn.textContent='删除';},3000); return; }
+      exercises=exercises.filter(x=>x.id!==id); saveExercises(); armed=false; closeSheet(exSheet); renderSub(); toast('动作已删除');
+    });
+    document.getElementById('fExForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const name=document.getElementById('fExName').value.trim(), cat=document.getElementById('fExCat').value.trim();
+      if(!name){ toast('请填写动作名称'); return; }
+      const id=document.getElementById('fExId').value;
+      if(id){ const ex=exercises.find(x=>x.id===Number(id)); ex.name=name; ex.category=cat; }
+      else { if(exercises.some(x=>x.name===name)){ toast('已存在同名动作'); return; } exercises.push({id:U.uid(),name,category:cat}); }
+      saveExercises(); closeSheet(exSheet); renderSub(); toast('已保存');
+    });
+  }
+  function openExForm(id){
+    document.getElementById('fExForm').reset();
+    const del=document.getElementById('fExDel');
+    if(id){ const ex=exercises.find(x=>x.id===id); document.getElementById('fExTitle').textContent='编辑动作'; document.getElementById('fExId').value=ex.id; document.getElementById('fExName').value=ex.name; document.getElementById('fExCat').value=ex.category||''; del.classList.remove('hidden'); }
+    else { document.getElementById('fExTitle').textContent='添加动作'; document.getElementById('fExId').value=''; del.classList.add('hidden'); }
+    del.textContent='删除'; del.classList.remove('armed');
+    openSheet(exSheet);
+  }
+
+  // 训练中：选择动作加入
+  function openExPicker(){
+    if(!exPicker){ exPicker=document.createElement('div'); exPicker.className='sheet'; document.body.appendChild(exPicker); }
+    const list=exercises.map(e=>`<div class="picker-item" data-name="${U.esc(e.name)}"><span>${U.esc(e.name)}</span><span class="eli-cat">${U.esc(e.category||'')}</span></div>`).join('');
+    exPicker.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3>添加动作</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body">
+        <div class="field"><label>新动作（输入后回车加入动作库）</label><input type="text" id="fPickNew" placeholder="自定义动作名"></div>
+        <div class="hint" style="margin-bottom:10px;">或从动作库选择：</div>${list||'<div class="hint">动作库为空</div>'}
+      </div>`;
+    exPicker.querySelector('[data-close]').addEventListener('click',()=>closeSheet(exPicker));
+    exPicker.querySelectorAll('.picker-item').forEach(it=>it.addEventListener('click',()=>{ addExerciseToWorkout(it.dataset.name); }));
+    const ni=exPicker.querySelector('#fPickNew');
+    ni.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const n=ni.value.trim(); if(!n)return; if(!exercises.some(x=>x.name===n)){ exercises.push({id:U.uid(),name:n,category:''}); saveExercises(); } addExerciseToWorkout(n); } });
+    openSheet(exPicker);
+  }
+  function addExerciseToWorkout(name){
+    if(!active) return;
+    active.exercises.push({name,sets:[]}); saveActive(); closeSheet(exPicker); renderSub();
+  }
+})();
+</script>
+
+
+<!-- =========================================================================
+     js/modules/body.js  —— 身体（体重折线图，Chart.js + Canvas 降级）
+     导出 initBody()
+========================================================================= -->
+<script>
+(function(){
+  let weights, bound=false, chart=null;
+  function loadData(){ weights=Storage.get('body_weights',[]); }
+  function saveData(){ Storage.set('body_weights',weights); }
+
+  window.initBody=function(){
+    loadData();
+    const root=document.getElementById('module-body');
+    if(!bound){
+      root.innerHTML=`
+        <div class="page-head-row"><div><div class="page-title">身体</div><div class="page-sub">体重趋势与记录</div></div>
+          <button class="add-btn" id="bAdd"><span class="plus">＋</span>记体重</button></div>
+        <div class="card"><div class="weight-current" id="bCurrent"></div></div>
+        <div class="card"><div style="font-weight:600;margin-bottom:10px;">体重趋势</div><div class="chart-box"><canvas id="bChart"></canvas></div></div>
+        <div class="card"><div style="font-weight:600;margin-bottom:4px;">历史记录</div><div class="weight-log" id="bLog"></div></div>`;
+      root.querySelector('#bAdd').addEventListener('click',openWeightForm);
+      buildSheet();
+      bound=true;
+    }
+    render();
+  };
+
+  function render(){
+    const sorted=weights.slice().sort((a,b)=>a.date<b.date?-1:1);
+    // 当前 + 变化
+    const cur=document.getElementById('bCurrent');
+    if(!sorted.length){ cur.innerHTML=`<div class="hint">还没有体重记录，点右上角「记体重」</div>`; }
+    else{
+      const latest=sorted[sorted.length-1], prev=sorted[sorted.length-2];
+      let delta='';
+      if(prev){ const d=(latest.kg-prev.kg); const cls=d>0?'up':(d<0?'down':''); const sign=d>0?'+':''; delta=`<div class="wc-delta ${cls}">较上次 ${sign}${d.toFixed(1)} kg</div>`; }
+      cur.innerHTML=`<div class="wc-kg">${latest.kg}<span class="u"> kg</span></div>${delta}<div class="hint" style="margin-top:6px;">${latest.date}</div>`;
+    }
+    drawChart(sorted);
+    // 列表
+    const log=document.getElementById('bLog');
+    if(!sorted.length){ log.innerHTML=''; return; }
+    log.innerHTML=sorted.slice().reverse().map(w=>`<div class="wl-row"><span class="wl-d">${w.date}</span><span class="wl-v">${w.kg} kg</span><span class="wl-del" data-id="${w.id}">删除</span></div>`).join('');
+    log.querySelectorAll('.wl-del').forEach(b=>b.addEventListener('click',()=>{ weights=weights.filter(x=>x.id!==Number(b.dataset.id)); saveData(); render(); toast('已删除'); }));
+  }
+
+  function drawChart(sorted){
+    const canvas=document.getElementById('bChart');
+    const labels=sorted.map(w=>w.date.slice(5)); const dataPts=sorted.map(w=>w.kg);
+    // 优先使用 Chart.js；不可用则降级为原生 Canvas
+    if(window.Chart){
+      if(chart){ chart.destroy(); chart=null; }
+      if(!sorted.length){ clearCanvas(canvas); return; }
+      chart=new Chart(canvas,{ type:'line',
+        data:{ labels, datasets:[{ data:dataPts, borderColor:'#C2873B', backgroundColor:'rgba(194,135,59,.12)', fill:true, tension:.3, pointBackgroundColor:'#A1652A', pointRadius:4, borderWidth:2 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+          scales:{ x:{grid:{display:false},ticks:{color:'#7C746A',font:{size:11}}}, y:{grid:{color:'#EFE8DA'},ticks:{color:'#7C746A',font:{size:11}}} } }
+      });
+    } else {
+      drawCanvasLine(canvas, labels, dataPts);
+    }
+  }
+  function clearCanvas(c){ const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); }
+  // 原生 Canvas 折线（离线降级）
+  function drawCanvasLine(canvas, labels, pts){
+    const dpr=window.devicePixelRatio||1; const W=canvas.clientWidth||canvas.parentElement.clientWidth, H=220;
+    canvas.width=W*dpr; canvas.height=H*dpr; const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+    if(!pts.length){ ctx.fillStyle='#A8A095'; ctx.font="13px 'Noto Sans SC'"; ctx.textAlign='center'; ctx.fillText('暂无数据',W/2,H/2); return; }
+    const pad={l:36,r:12,t:14,b:24};
+    const min=Math.min(...pts)-1, max=Math.max(...pts)+1, range=max-min||1;
+    const xw=(W-pad.l-pad.r), yh=(H-pad.t-pad.b);
+    const X=i=>pad.l + (pts.length===1?xw/2:xw*i/(pts.length-1));
+    const Y=v=>pad.t + yh*(1-(v-min)/range);
+    // 网格
+    ctx.strokeStyle='#EFE8DA'; ctx.lineWidth=1; ctx.fillStyle='#7C746A'; ctx.font="10px 'Noto Sans SC'"; ctx.textAlign='right'; ctx.textBaseline='middle';
+    for(let i=0;i<=3;i++){ const v=min+range*i/3, y=Y(v); ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke(); ctx.fillText(v.toFixed(1),pad.l-6,y); }
+    // 填充
+    ctx.beginPath(); ctx.moveTo(X(0),Y(pts[0])); pts.forEach((v,i)=>ctx.lineTo(X(i),Y(v)));
+    ctx.lineTo(X(pts.length-1),H-pad.b); ctx.lineTo(X(0),H-pad.b); ctx.closePath(); ctx.fillStyle='rgba(194,135,59,.12)'; ctx.fill();
+    // 线
+    ctx.beginPath(); ctx.moveTo(X(0),Y(pts[0])); pts.forEach((v,i)=>ctx.lineTo(X(i),Y(v))); ctx.strokeStyle='#C2873B'; ctx.lineWidth=2; ctx.stroke();
+    // 点 + x标签
+    ctx.fillStyle='#A1652A'; ctx.textAlign='center'; ctx.textBaseline='top';
+    pts.forEach((v,i)=>{ ctx.beginPath();ctx.arc(X(i),Y(v),3.5,0,7);ctx.fill(); });
+    ctx.fillStyle='#7C746A';
+    const step=Math.ceil(labels.length/6);
+    labels.forEach((l,i)=>{ if(i%step===0||i===labels.length-1) ctx.fillText(l,X(i),H-pad.b+5); });
+  }
+
+  // 弹窗
+  let sheet;
+  function buildSheet(){
+    sheet=document.createElement('div'); sheet.className='sheet';
+    sheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3>记录体重</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><form id="bForm" autocomplete="off">
+        <div class="field"><label>日期</label><input type="date" id="bfDate" required></div>
+        <div class="field"><label>体重 (kg)</label><input type="number" id="bfKg" step="0.1" min="0" placeholder="例如 65.5" required></div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary btn-block">保存</button></div>
+      </form></div>`;
+    document.body.appendChild(sheet);
+    sheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(sheet));
+    document.getElementById('bForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const date=document.getElementById('bfDate').value, kg=parseFloat(document.getElementById('bfKg').value);
+      if(!date||!(kg>0)){ toast('请填写有效日期和体重'); return; }
+      // 同一天覆盖
+      const exist=weights.find(w=>w.date===date);
+      if(exist) exist.kg=kg; else weights.push({id:U.uid(),date,kg});
+      saveData(); closeSheet(sheet); render(); toast('已记录');
+    });
+  }
+  function openWeightForm(){ document.getElementById('bForm').reset(); document.getElementById('bfDate').value=U.today(); openSheet(sheet); }
+})();
+</script>
+
+
+<!-- =========================================================================
+     js/modules/habits.js  —— 习惯追踪器（周视图打卡 / 频率 / 连续 / 热力图）
+     导出 initHabits()；并暴露 window.getTodayHabitCompletion()
+========================================================================= -->
+<script>
+(function(){
+  let config, log;                 // habits_config(数组) / habits_log(对象 date->{id:true})
+  let weekStart;                   // 当前周的周一(Date)
+  let selectedHabit=null;          // 详情选中的习惯 id
+  let bound=false;
+  const WD=['周一','周二','周三','周四','周五','周六','周日'];
+  const EMOJIS=['📖','💧','🏃','🧘','💪','🍎','😴','🌅','✍️','🧹','💊','☕','🎯','🚭','🦷','🌱'];
+
+  function loadData(){
+    config=Storage.get('habits_config',[]);
+    log=Storage.get('habits_log',{});
+  }
+  function saveConfig(){ Storage.set('habits_config',config); }
+  function saveLog(){ Storage.set('habits_log',log); }
+
+  // —— 日期工具 ——
+  function mondayOf(d){ const x=new Date(d); x.setHours(0,0,0,0); const off=(x.getDay()+6)%7; x.setDate(x.getDate()-off); return x; }
+  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  function isFuture(iso){ return iso>U.today(); }
+  function weekDates(start){ return Array.from({length:7},(_,i)=>U.toISO(addDays(start,i))); }
+  function isDone(habitId,iso){ return !!(log[iso] && log[iso][habitId]); }
+
+  function activeHabits(){ return config.filter(h=>!h.archived); }
+  function archivedHabits(){ return config.filter(h=>h.archived); }
+
+  // 频率文案 + 本周目标次数
+  function freqLabel(h){
+    if(h.freq.type==='daily') return '每天';
+    if(h.freq.type==='weekly') return `每周 ${h.freq.times} 次`;
+    return `每 ${h.freq.interval} 天`;
+  }
+  function weekTarget(h){
+    if(h.freq.type==='daily') return 7;
+    if(h.freq.type==='weekly') return h.freq.times;
+    return Math.max(1, Math.floor(7/(h.freq.interval||1)));
+  }
+  function weekDoneCount(h,start){ return weekDates(start).reduce((s,iso)=>s+(isDone(h.id,iso)?1:0),0); }
+  function isMetThisWeek(h,start){ return weekDoneCount(h,start) >= weekTarget(h); }
+
+  // —— 对外初始化入口 ——
+  window.initHabits=function(){
+    loadData();
+    if(!weekStart) weekStart=mondayOf(new Date());
+    const root=document.getElementById('module-habits');
+    if(!bound){
+      root.innerHTML=`
+        <div class="page-head-row">
+          <div><div class="page-title">习惯</div><div class="page-sub" id="hSub"></div></div>
+          <button class="add-btn" id="hAdd"><span class="plus">＋</span>添加习惯</button>
+        </div>
+        <div class="habit-week-nav">
+          <button id="hPrev">‹ 上周</button>
+          <div class="wk-label" id="hWkLabel"></div>
+          <button id="hNext">下周 ›</button>
+        </div>
+        <div id="hGrid"></div>
+        <div id="hDetail" class="habit-detail"></div>
+        <div id="hArchived" class="habit-archived"></div>
+        <div class="card" style="margin-top:18px;"><div style="font-weight:600;margin-bottom:4px;">年度热力图</div><div class="hint" style="margin-bottom:12px;">颜色越深表示当日习惯完成度越高</div><div id="hHeat"></div></div>`;
+      root.querySelector('#hAdd').addEventListener('click',()=>openHabitForm());
+      root.querySelector('#hPrev').addEventListener('click',()=>{ weekStart=addDays(weekStart,-7); render(); });
+      root.querySelector('#hNext').addEventListener('click',()=>{ weekStart=addDays(weekStart,7); render(); });
+      buildSheet();
+      bound=true;
+    }
+    render();
+  };
+
+  function render(){
+    document.getElementById('hSub').textContent=`共 ${activeHabits().length} 个进行中习惯`;
+    renderWeekLabel();
+    renderGrid();
+    renderDetail();
+    renderArchived();
+    renderHeat();
+  }
+
+  function renderWeekLabel(){
+    const days=weekDates(weekStart);
+    const thisMon=U.toISO(mondayOf(new Date()));
+    const isThis=days[0]===thisMon;
+    const a=U.parseISO(days[0]), b=U.parseISO(days[6]);
+    document.getElementById('hWkLabel').innerHTML=
+      `<span class="${isThis?'wk-today':''}">${isThis?'本周':(days[0]>thisMon?'未来一周':'过往一周')}</span>
+       <span class="wk-sub">${a.getMonth()+1}/${a.getDate()} – ${b.getMonth()+1}/${b.getDate()}</span>`;
+  }
+
+  /* ---------- 周视图网格 ---------- */
+  function renderGrid(){
+    const host=document.getElementById('hGrid');
+    const habits=activeHabits();
+    const days=weekDates(weekStart);
+    const today=U.today();
+    if(!habits.length){
+      host.innerHTML=`<div class="empty-state"><div class="em-ill">习</div><p>还没有习惯<br>点右上角「添加习惯」开始</p></div>`;
+      return;
+    }
+    // 表头
+    let head=`<div class="hg-row hg-head"><div class="hg-cell hg-name">习惯</div>`;
+    days.forEach((iso,i)=>{ const d=U.parseISO(iso);
+      head+=`<div class="hg-cell hg-dayhead ${iso===today?'today':''}"><span class="d-w">${WD[i].slice(1)}</span><span class="d-n">${d.getDate()}</span></div>`; });
+    head+=`</div>`;
+    // 习惯行
+    let rows='';
+    habits.forEach(h=>{
+      const met=h.freq.type!=='daily' && isMetThisWeek(h,weekStart);
+      let cells='';
+      days.forEach(iso=>{
+        const fut=isFuture(iso), done=isDone(h.id,iso);
+        cells+=`<div class="hg-check ${done?'done':''} ${iso===today?'today-col':''} ${fut?'future':''}" data-h="${h.id}" data-d="${iso}">
+          <span class="mark">${done?'✓':''}</span></div>`;
+      });
+      rows+=`<div class="hg-row ${met?'met':''}">
+        <div class="hg-cell hg-name" draggable="true" data-h="${h.id}">
+          <span class="h-ico">${h.icon||'🎯'}</span>
+          <span class="h-info"><span class="h-nm">${U.esc(h.name)}</span><span class="h-fq">${freqLabel(h)}${h.freq.type!=='daily'?` · ${weekDoneCount(h,weekStart)}/${weekTarget(h)}`:''}</span></span>
+        </div>${cells}</div>`;
+    });
+    host.innerHTML=`<div class="habit-grid-wrap"><div class="habit-grid">${head}${rows}</div></div>`;
+
+    // 打卡切换
+    host.querySelectorAll('.hg-check').forEach(c=>{
+      if(c.classList.contains('future')) return;
+      c.addEventListener('click',()=>{
+        const id=Number(c.dataset.h), iso=c.dataset.d;
+        if(!log[iso]) log[iso]={};
+        if(log[iso][id]){ delete log[iso][id]; if(!Object.keys(log[iso]).length) delete log[iso]; }
+        else log[iso][id]=true;
+        saveLog(); render();
+      });
+    });
+    // 习惯名：点击看详情
+    host.querySelectorAll('.hg-name[data-h]').forEach(n=>{
+      n.addEventListener('click',e=>{ if(n.getAttribute('dragging'))return; selectedHabit=Number(n.dataset.h); renderDetail(true); });
+    });
+    bindDrag(host);
+  }
+
+  // 拖拽排序（简单实现）
+  let dragId=null;
+  function bindDrag(host){
+    host.querySelectorAll('.hg-name[draggable=true]').forEach(n=>{
+      n.addEventListener('dragstart',e=>{ dragId=Number(n.dataset.h); n.setAttribute('dragging','1'); e.dataTransfer.effectAllowed='move'; });
+      n.addEventListener('dragend',()=>{ n.removeAttribute('dragging'); host.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over')); });
+      n.addEventListener('dragover',e=>{ e.preventDefault(); n.classList.add('drag-over'); });
+      n.addEventListener('dragleave',()=>n.classList.remove('drag-over'));
+      n.addEventListener('drop',e=>{
+        e.preventDefault(); n.classList.remove('drag-over');
+        const targetId=Number(n.dataset.h);
+        if(dragId==null||dragId===targetId) return;
+        const from=config.findIndex(h=>h.id===dragId), to=config.findIndex(h=>h.id===targetId);
+        const [moved]=config.splice(from,1); config.splice(to,0,moved);
+        saveConfig(); render();
+      });
+    });
+  }
+
+  /* ---------- 连续天数 ---------- */
+  function currentStreak(h){
+    let n=0, cur=new Date(); cur.setHours(0,0,0,0);
+    if(!isDone(h.id,U.toISO(cur))){ cur=addDays(cur,-1); if(!isDone(h.id,U.toISO(cur))) return 0; }
+    while(isDone(h.id,U.toISO(cur))){ n++; cur=addDays(cur,-1); }
+    return n;
+  }
+  function longestStreak(h){
+    const dates=Object.keys(log).filter(d=>log[d][h.id]).sort();
+    if(!dates.length) return 0;
+    let best=1,run=1;
+    for(let i=1;i<dates.length;i++){
+      const prev=U.parseISO(dates[i-1]), curr=U.parseISO(dates[i]);
+      if((curr-prev)===86400000){ run++; best=Math.max(best,run); } else run=1;
+    }
+    return best;
+  }
+
+  /* ---------- 选中习惯详情 ---------- */
+  function renderDetail(scroll){
+    const host=document.getElementById('hDetail');
+    const h=config.find(x=>x.id===selectedHabit && !x.archived);
+    if(!h){ host.innerHTML=''; return; }
+    host.innerHTML=`
+      <div class="card">
+        <div class="hd-head">
+          <span class="hd-ico">${h.icon||'🎯'}</span>
+          <div><div class="hd-nm">${U.esc(h.name)}</div><div class="hd-desc">${U.esc(h.desc||freqLabel(h))}</div></div>
+          <div class="hd-actions"><button data-act="edit">编辑</button><button data-act="archive">归档</button></div>
+        </div>
+        <div class="hd-stats">
+          <div class="stat-box"><div class="big">${currentStreak(h)}<span class="u">天</span></div><div class="lbl">当前连续 🔥</div></div>
+          <div class="stat-box"><div class="big">${longestStreak(h)}<span class="u">天</span></div><div class="lbl">最长连续</div></div>
+          <div class="stat-box"><div class="big">${weekDoneCount(h,weekStart)}<span class="u">/${weekTarget(h)}</span></div><div class="lbl">本周进度</div></div>
+        </div>
+      </div>`;
+    host.querySelector('[data-act=edit]').addEventListener('click',()=>openHabitForm(h.id));
+    host.querySelector('[data-act=archive]').addEventListener('click',()=>{ h.archived=true; saveConfig(); selectedHabit=null; render(); toast('已归档'); });
+    if(scroll) host.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
+  /* ---------- 归档列表 ---------- */
+  function renderArchived(){
+    const host=document.getElementById('hArchived');
+    const arch=archivedHabits();
+    if(!arch.length){ host.innerHTML=''; return; }
+    host.innerHTML=`<div class="hint" style="margin-bottom:8px;">已归档（${arch.length}）</div>`+
+      arch.map(h=>`<div class="arch-item"><span class="a-ico">${h.icon||'🎯'}</span><span>${U.esc(h.name)}</span>
+        <button data-restore="${h.id}">恢复</button><button data-del="${h.id}">删除</button></div>`).join('');
+    host.querySelectorAll('[data-restore]').forEach(b=>b.addEventListener('click',()=>{ const h=config.find(x=>x.id===Number(b.dataset.restore)); h.archived=false; saveConfig(); render(); toast('已恢复'); }));
+    host.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{ deleteHabit(Number(b.dataset.del)); }));
+  }
+
+  function deleteHabit(id){
+    config=config.filter(h=>h.id!==id);
+    Object.keys(log).forEach(d=>{ if(log[d][id]){ delete log[d][id]; if(!Object.keys(log[d]).length) delete log[d]; } });
+    saveConfig(); saveLog(); if(selectedHabit===id) selectedHabit=null; render(); toast('已删除习惯');
+  }
+
+  /* ---------- 年度热力图（按当日完成百分比固定分级） ---------- */
+  function renderHeat(){
+    const host=document.getElementById('hHeat');
+    const habits=activeHabits();
+    if(!habits.length){ host.innerHTML='<div class="hint">暂无数据</div>'; return; }
+    const end=new Date(); end.setHours(0,0,0,0);
+    const start=mondayOf(addDays(end,-364));
+    let html='<div class="heatmap">';
+    let cur=new Date(start);
+    while(cur<=end){
+      const iso=U.toISO(cur);
+      const done=habits.reduce((s,h)=>s+(isDone(h.id,iso)?1:0),0);
+      const pct= habits.length? done/habits.length : 0;
+      let lv=0; if(pct>0){ if(pct>=1)lv=4; else if(pct>=.66)lv=3; else if(pct>=.33)lv=2; else lv=1; }
+      html+=`<div class="heat-cell ${lv?'l'+lv:''}" title="${iso}：${done}/${habits.length}"></div>`;
+      cur=addDays(cur,1);
+    }
+    html+='</div>';
+    host.innerHTML=`<div class="heat-wrap">${html}</div>
+      <div class="heat-legend"><span>低</span><span class="hl-c heat-cell"></span><span class="hl-c heat-cell l1"></span><span class="hl-c heat-cell l2"></span><span class="hl-c heat-cell l3"></span><span class="hl-c heat-cell l4"></span><span>全部完成</span></div>`;
+  }
+
+  /* ---------- 添加 / 编辑 弹窗 ---------- */
+  let sheet, formIcon='🎯', formFreq='daily';
+  function buildSheet(){
+    sheet=document.createElement('div'); sheet.className='sheet';
+    sheet.innerHTML=`<div class="sheet-grip"></div>
+      <div class="sheet-head"><h3 id="hfTitle">添加习惯</h3><button class="sheet-close" data-close>×</button></div>
+      <div class="sheet-body"><form id="hForm" autocomplete="off"><input type="hidden" id="hEditId">
+        <div class="field"><label>图标</label><div class="emoji-row" id="hEmoji"></div></div>
+        <div class="field"><label>名称</label><input type="text" id="hfName" placeholder="例如 早起、喝水2000ml" required></div>
+        <div class="field"><label>简短描述（可选）</label><input type="text" id="hfDesc" placeholder="例如 6:30 起床"></div>
+        <div class="field"><label>目标频率</label>
+          <div class="seg" id="hFreq"><button type="button" data-f="daily" class="on">每天</button><button type="button" data-f="weekly">每周X次</button><button type="button" data-f="custom">自定义</button></div>
+          <div class="freq-extra hidden" id="hFreqWeekly"><span>每周</span><input type="number" id="hfTimes" min="1" max="7" value="3"><span>次</span></div>
+          <div class="freq-extra hidden" id="hFreqCustom"><span>每隔</span><input type="number" id="hfInterval" min="1" value="2"><span>天一次</span></div>
+        </div>
+        <div class="form-actions"><button type="button" class="btn btn-danger hidden" id="hDel">删除</button><button type="submit" class="btn btn-primary" id="hSave">保存</button></div>
+      </form></div>`;
+    document.body.appendChild(sheet);
+    // emoji 选择
+    const er=sheet.querySelector('#hEmoji');
+    er.innerHTML=EMOJIS.map(e=>`<div class="em" data-e="${e}">${e}</div>`).join('');
+    er.addEventListener('click',ev=>{ const el=ev.target.closest('.em'); if(!el)return; formIcon=el.dataset.e; er.querySelectorAll('.em').forEach(x=>x.classList.toggle('on',x===el)); });
+    // 频率切换
+    sheet.querySelectorAll('#hFreq button').forEach(b=>b.addEventListener('click',()=>setFreq(b.dataset.f)));
+    sheet.querySelector('[data-close]').addEventListener('click',()=>closeSheet(sheet));
+    // 删除（两步）
+    let armed=false,t;
+    sheet.querySelector('#hDel').addEventListener('click',e=>{
+      const id=Number(document.getElementById('hEditId').value); if(!id)return; const btn=e.target;
+      if(!armed){ armed=true; btn.classList.add('armed'); btn.textContent='确认删除？含打卡记录'; clearTimeout(t); t=setTimeout(()=>{armed=false;btn.classList.remove('armed');btn.textContent='删除';},3000); return; }
+      armed=false; closeSheet(sheet); deleteHabit(id);
+    });
+    // 提交
+    sheet.querySelector('#hForm').addEventListener('submit',e=>{
+      e.preventDefault();
+      const name=document.getElementById('hfName').value.trim();
+      if(!name){ toast('请填写名称'); return; }
+      let freq;
+      if(formFreq==='weekly') freq={type:'weekly',times:Math.min(7,Math.max(1,parseInt(document.getElementById('hfTimes').value)||1))};
+      else if(formFreq==='custom') freq={type:'custom',interval:Math.max(1,parseInt(document.getElementById('hfInterval').value)||1)};
+      else freq={type:'daily'};
+      const desc=document.getElementById('hfDesc').value.trim();
+      const id=document.getElementById('hEditId').value;
+      if(id){ const h=config.find(x=>x.id===Number(id)); Object.assign(h,{name,desc,icon:formIcon,freq}); }
+      else config.push({id:U.uid(),name,desc,icon:formIcon,freq,archived:false});
+      saveConfig(); closeSheet(sheet); render(); toast(id?'已保存':'习惯已添加');
+    });
+  }
+  function setFreq(f){ formFreq=f; sheet.querySelectorAll('#hFreq button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+    sheet.querySelector('#hFreqWeekly').classList.toggle('hidden',f!=='weekly');
+    sheet.querySelector('#hFreqCustom').classList.toggle('hidden',f!=='custom'); }
+  function openHabitForm(id){
+    sheet.querySelector('#hForm').reset();
+    const del=document.getElementById('hDel'); del.textContent='删除'; del.classList.remove('armed');
+    if(id){ const h=config.find(x=>x.id===id);
+      document.getElementById('hfTitle').textContent='编辑习惯'; document.getElementById('hEditId').value=h.id;
+      document.getElementById('hfName').value=h.name; document.getElementById('hfDesc').value=h.desc||'';
+      formIcon=h.icon||'🎯'; setFreq(h.freq.type);
+      if(h.freq.type==='weekly') document.getElementById('hfTimes').value=h.freq.times;
+      if(h.freq.type==='custom') document.getElementById('hfInterval').value=h.freq.interval;
+      del.classList.remove('hidden');
+    } else {
+      document.getElementById('hfTitle').textContent='添加习惯'; document.getElementById('hEditId').value='';
+      formIcon='🎯'; setFreq('daily'); del.classList.add('hidden');
+    }
+    sheet.querySelectorAll('#hEmoji .em').forEach(x=>x.classList.toggle('on',x.dataset.e===formIcon));
+    openSheet(sheet);
+  }
+
+  /* ---------- 暴露给仪表盘：今日完成情况 ---------- */
+  window.getTodayHabitCompletion=function(){
+    const cfg=Storage.get('habits_config',[]);
+    const lg=Storage.get('habits_log',{});
+    const active=cfg.filter(h=>!h.archived);
+    const today=U.today();
+    const done=active.reduce((s,h)=>s+((lg[today]&&lg[today][h.id])?1:0),0);
+    return { done, total:active.length };
+  };
+})();
+</script>
+
+
+<!-- =========================================================================
+     js/modules/settings.js  —— 设置（数据导出 / 导入 / 清空）
+     导出 initSettings()
+========================================================================= -->
+<script>
+(function(){
+  let bound=false;
+  window.initSettings=function(){
+    const root=document.getElementById('module-settings');
+    if(!bound){
+      root.innerHTML=`
+        <div class="page-head-row"><div><div class="page-title">设置</div><div class="page-sub">数据管理与备份</div></div></div>
+        <div class="card">
+          <div class="set-group"><h4>数据备份</h4>
+            <div class="set-row-item"><div><div class="sri-t">导出全部数据</div><div class="sri-d">打包所有模块数据为 JSON 文件下载</div></div><button class="btn btn-ghost" id="sExport">导出</button></div>
+            <div class="set-row-item"><div><div class="sri-t">导入数据</div><div class="sri-d">选择 JSON 文件，合并覆盖到本机</div></div><button class="btn btn-ghost" id="sImport">导入</button></div>
+          </div>
+          <div class="set-group"><h4>危险操作</h4>
+            <div class="set-row-item"><div><div class="sri-t">清空全部数据</div><div class="sri-d">删除本工具箱在本机的所有数据，不可恢复</div></div><button class="btn btn-danger" id="sClear">清空</button></div>
+          </div>
+          <div class="set-group"><h4>存储概览</h4><div id="sOverview" class="hint"></div></div>
+        </div>
+        <input type="file" id="sFile" accept="application/json,.json" class="hidden">`;
+      bindSettings(root);
+      bound=true;
+    }
+    renderOverview();
+  };
+
+  function renderOverview(){
+    const keys=Storage.keys();
+    const all=Storage.exportAll();
+    const bytes=Object.values(all).reduce((s,v)=>s+(v||'').length,0);
+    const map={ 'reading_data':'读书','fitness_workouts':'健身·训练','fitness_exercises':'健身·动作库','fitness_active':'健身·进行中','body_weights':'身体·体重','habits_config':'习惯·定义','habits_log':'习惯·打卡' };
+    const lines=keys.map(k=>{ const short=k.replace(Storage.NS,''); return `${map[short]||short}`; });
+    const memWarn = Storage.available ? '' : '<br><span style="color:var(--danger)">注意：当前环境本地存储不可用，数据仅临时保存在内存中（刷新或下载后打开即正常）。</span>';
+    document.getElementById('sOverview').innerHTML = (keys.length
+      ? `已存储 ${keys.length} 项 · 约 ${(bytes/1024).toFixed(1)} KB<br>${lines.join('、')}`
+      : '暂无数据') + memWarn;
+  }
+
+  function bindSettings(root){
+    // 导出
+    root.querySelector('#sExport').addEventListener('click',()=>{
+      const payload={ app:'personal-toolbox', version:1, exportedAt:new Date().toISOString(), data:Storage.exportAll() };
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a');
+      a.href=url; a.download=`toolbox-backup-${U.today()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      toast('已导出备份文件');
+    });
+    // 导入
+    const file=root.querySelector('#sFile');
+    root.querySelector('#sImport').addEventListener('click',()=>file.click());
+    file.addEventListener('change',()=>{
+      const f=file.files[0]; if(!f)return;
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{
+          const parsed=JSON.parse(reader.result);
+          const data=parsed.data||parsed;   // 兼容直接是 data 的情况
+          const n=Storage.importAll(data);
+          toast(`已导入 ${n} 项数据`);
+          // 重置各模块绑定状态并刷新当前视图
+          location.reload();
+        }catch(err){ toast('文件解析失败，请确认是导出的 JSON'); }
+        file.value='';
+      };
+      reader.readAsText(f);
+    });
+    // 清空（两步）
+    let armed=false,t;
+    root.querySelector('#sClear').addEventListener('click',(e)=>{
+      const btn=e.target;
+      if(!armed){ armed=true; btn.classList.add('armed'); btn.textContent='确认清空？不可恢复'; clearTimeout(t); t=setTimeout(()=>{armed=false;btn.classList.remove('armed');btn.textContent='清空';},3500); return; }
+      Storage.clear(); armed=false; btn.classList.remove('armed'); btn.textContent='清空'; toast('已清空全部数据'); location.reload();
+    });
+  }
+})();
+</script>
+
+
+<!-- =========================================================================
+     启动应用
+========================================================================= -->
+<script>
+  App.boot();
+  // 注册 Service Worker（仅在通过 http/https 访问时，file:// 直接打开会跳过）
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
