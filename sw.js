@@ -1,7 +1,7 @@
 /* Service Worker —— 个人工具箱离线缓存
    缓存应用外壳（同源文件），让安装到主屏幕后可离线运行。
    CDN 资源（Chart.js、字体）会尝试缓存，离线取不到时应用本身有降级方案。 */
-const CACHE = 'toolbox-v1';
+const CACHE = 'toolbox-v2';
 const SHELL = [
   './',
   './index.html',
