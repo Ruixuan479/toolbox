@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- 个人工具箱 · APP_BUILD: v3-2026-07 · 健身计量方式升级 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -2745,6 +2746,10 @@ function initDashboard(){
       root.innerHTML=`
         <div class="page-head-row"><div><div class="page-title">设置</div><div class="page-sub">数据管理与备份</div></div></div>
         <div class="card">
+          <div class="set-group"><h4>版本与更新</h4>
+            <div class="set-row-item"><div><div class="sri-t">当前版本</div><div class="sri-d" id="sVersion">—</div></div><button class="btn btn-ghost" id="sUpdate">检查更新</button></div>
+            <div class="hint" style="padding-top:8px;">若手机上看到的仍是旧版，点「检查更新」会清除缓存并重新加载（不影响你的数据）。</div>
+          </div>
           <div class="set-group"><h4>数据备份</h4>
             <div class="set-row-item"><div><div class="sri-t">导出全部数据</div><div class="sri-d">打包所有模块数据为 JSON 文件下载</div></div><button class="btn btn-ghost" id="sExport">导出</button></div>
             <div class="set-row-item"><div><div class="sri-t">导入数据</div><div class="sri-d">选择 JSON 文件，合并覆盖到本机</div></div><button class="btn btn-ghost" id="sImport">导入</button></div>
@@ -2759,7 +2764,32 @@ function initDashboard(){
       bound=true;
     }
     renderOverview();
+    renderVersion();
   };
+
+  // 显示应用版本 + Service Worker 实际缓存版本（用于核对是否真的更新了）
+  function renderVersion(){
+    const el=document.getElementById('sVersion'); if(!el) return;
+    const app=window.APP_VERSION||'未知';
+    el.textContent=`应用 ${app}`;
+    if(!('serviceWorker' in navigator) || !navigator.serviceWorker.controller){
+      el.textContent=`应用 ${app} · 未启用离线缓存`;
+      return;
+    }
+    // 向 SW 查询它自己的版本号
+    try{
+      const ch=new MessageChannel();
+      const timer=setTimeout(()=>{},1500);
+      navigator.serviceWorker.addEventListener('message',function h(ev){
+        if(ev.data && ev.data.type==='VERSION'){
+          clearTimeout(timer);
+          el.textContent=`应用 ${app} · 缓存 ${ev.data.version}`;
+          navigator.serviceWorker.removeEventListener('message',h);
+        }
+      });
+      navigator.serviceWorker.controller.postMessage({type:'GET_VERSION'});
+    }catch(e){}
+  }
 
   function renderOverview(){
     const keys=Storage.keys();
@@ -2774,6 +2804,11 @@ function initDashboard(){
   }
 
   function bindSettings(root){
+    // 检查更新：注销 SW、清空缓存、硬刷新（数据不受影响）
+    root.querySelector('#sUpdate').addEventListener('click',()=>{
+      toast('正在清除缓存并重新加载…');
+      setTimeout(()=>{ if(typeof window.forceUpdate==='function') window.forceUpdate(); else location.reload(); },600);
+    });
     // 导出
     root.querySelector('#sExport').addEventListener('click',()=>{
       const payload={ app:'personal-toolbox', version:1, exportedAt:new Date().toISOString(), data:Storage.exportAll() };
@@ -2817,13 +2852,60 @@ function initDashboard(){
      启动应用
 ========================================================================= -->
 <script>
+  /* 应用版本号：每次发布新版本时同步修改，用于设置页显示与核对 */
+  window.APP_VERSION = 'v3 · 2026-07';
+
   App.boot();
-  // 注册 Service Worker（仅在通过 http/https 访问时，file:// 直接打开会跳过）
+
+  /* ===== Service Worker 注册与自动更新 =====
+     仅在 http/https 下注册（file:// 直接打开会跳过） */
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      // updateViaCache:'none' —— 不允许浏览器用 HTTP 缓存里的旧 sw.js
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+        // 每次打开应用主动检查一次更新
+        reg.update().catch(() => {});
+
+        // 发现新版本 → 装好后提示并刷新
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              // 已有旧版在控制页面，说明这是一次“更新”
+              sw.postMessage({ type: 'SKIP_WAITING' });
+              if (typeof toast === 'function') toast('已下载新版本，正在刷新…');
+              setTimeout(() => location.reload(), 800);
+            }
+          });
+        });
+      }).catch(() => {});
+
+      // 新 SW 接管后自动刷新一次（防重复刷新）
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloaded) return;
+        reloaded = true;
+        location.reload();
+      });
     });
   }
+
+  /* 强制更新：注销 SW + 清空所有缓存 + 硬刷新（设置页调用） */
+  window.forceUpdate = async function () {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch (e) { /* 忽略 */ }
+    // 带时间戳绕过 HTTP 缓存
+    location.replace(location.pathname + '?u=' + Date.now());
+  };
 </script>
 </body>
 </html>
